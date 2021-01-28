@@ -3,6 +3,7 @@ package ru.avem.rele.communication.model
 import mu.KotlinLogging
 import ru.avem.kserialpooler.communication.adapters.modbusrtu.ModbusRTUAdapter
 import ru.avem.kserialpooler.communication.utils.TransportException
+import java.lang.Thread.sleep
 
 interface IDeviceController {
     val name: String
@@ -20,8 +21,8 @@ interface IDeviceController {
 
     }
 
-    fun readRequest(request: String): Int {
-        return 0
+    fun readRequest(request: String): String {
+        return "0"
     }
 
     fun <T : Number> writeRegister(register: DeviceRegister, value: T) {
@@ -55,10 +56,8 @@ interface IDeviceController {
             try {
                 block()
                 requestSuccessCount++
-                isResponding = true
                 break
             } catch (e: TransportException) {
-                isResponding = false
                 val message =
                     "repeat $attempt/${connection.attemptCount} attempts with common success rate = ${(requestSuccessCount) * 100 / requestTotalCount}%"
                 KotlinLogging.logger(name).info(message)
@@ -67,6 +66,7 @@ interface IDeviceController {
                     throw TransportException(message)
                 }
             }
+            sleep(10)
         }
     }
 

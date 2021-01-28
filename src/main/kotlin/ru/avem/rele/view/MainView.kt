@@ -1,15 +1,12 @@
 package ru.avem.rele.view
 
+import javafx.beans.property.SimpleStringProperty
 import javafx.geometry.Pos
 import javafx.scene.control.*
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
-import javafx.scene.shape.Circle
 import javafx.stage.Modality
-import javafx.stage.Stage
 import org.slf4j.LoggerFactory
 import ru.avem.rele.controllers.*
-import ru.avem.rele.database.entities.TestObjectsType
 import ru.avem.rele.entities.*
 import ru.avem.rele.utils.transitionLeft
 import ru.avem.rele.view.Styles.Companion.megaHard
@@ -27,18 +24,13 @@ class MainView : View("Комплексный стенд проверки рел
     private val controller: MainViewController by inject()
 
     var mainMenubar: MenuBar by singleAssign()
-    var comIndicate: Circle by singleAssign()
-
-    private var imgPressure: ImageView by singleAssign()
-    private var img: ImageView by singleAssign()
 
     private var addIcon = ImageView("ru/avem/rele/icon/add.png")
     private var deleteIcon = ImageView("ru/avem/rele/icon/delete.png")
     private var editIcon = ImageView("ru/avem/rele/icon/edit.png")
-    private var pressureJPG = Image("ru/avem/rele/icon/pressure.jpg", 400.0, 280.0, false, true)
 
-
-    var comboBoxTestItem: ComboBox<TestObjectsType> by singleAssign()
+    var comboBoxTestItem: ComboBox<String> by singleAssign()
+    var comboBoxTypeItem: ComboBox<String> by singleAssign()
 
     var buttonStart: Button by singleAssign()
     var buttonSelectAll: Button by singleAssign()
@@ -50,7 +42,12 @@ class MainView : View("Комплексный стенд проверки рел
     var checkBoxTest6: CheckBox by singleAssign()
     var textFieldSerialNumber: TextField by singleAssign()
 
-    var test1Modal: Stage = Stage()
+    var tableView1Result: TableView<TableValuesTest1> by singleAssign()
+    var tableView2Result: TableView<TableValuesTest2> by singleAssign()
+    var tableView3Result: TableView<TableValuesTest3> by singleAssign()
+    var tableView4Result: TableView<TableValuesTest4> by singleAssign()
+    var tableView5Result: TableView<TableValuesTest5> by singleAssign()
+    var tableView6Result: TableView<TableValuesTest6> by singleAssign()
 
     var test1Controller = Test1Controller()
     var test2Controller = Test2Controller()
@@ -58,6 +55,80 @@ class MainView : View("Комплексный стенд проверки рел
     var test4Controller = Test5Controller()
     var test5Controller = Test6Controller()
 
+    private var selectedItemProperty = SimpleStringProperty()
+
+    val nmsh1 = observableListOf(
+        "НМШ1-400",
+        "НМШ1-1440",
+        "НМШ1-7000",
+        "НМШМ1-11",
+        "НМШМ1-22",
+        "НМШМ1-180",
+        "НМШМ1-360",
+        "НМШМ1-560",
+        "НМШМ1-1120",
+        "НМШМ1-1000/560",
+        "НШ1-2",
+        "НШ1-400/30",
+        "НШ1-800",
+        "НШ1-2000",
+        "НШ1-9000",
+        "НШ1М-200/30",
+        "НШ1М-400",
+        "НШ1М-200/400"
+    )
+
+    val nmsh2 = observableListOf(
+        "НМШ2-900",
+        "НМШ2-4000",
+        "НМШ2-12000",
+        "НМШМ2-1.5",
+        "НМШМ2-320",
+        "НМШМ2-640",
+        "НМШМ2-1500",
+        "НМШМ2-3000",
+        "НШ2-2",
+        "НШ2-40",
+        "НШ2-2000"
+    )
+
+    val ansh2 = observableListOf(
+        "АНШМ2-310",
+        "АНШМ2-620",
+        "АНШМ2-760",
+        "АНШ2-2",
+        "АНШ2-37",
+        "АНШ2-40",
+        "АНШ2-310",
+        "АНШ2-700",
+        "АНШ2-1230"
+    )
+
+    val rel1 = observableListOf(
+        "РЭЛ1-1600",
+        "РЭЛ1М-600",
+        "РЭЛ1-400",
+        "РЭЛ1М-160",
+        "РЭЛ1-6.8"
+    )
+    val nmsh3 = observableListOf(
+        "НМШ3-460/400"
+    )
+
+    val nmsh4 = observableListOf(
+        "НМШ4-3",
+        "НМШ4-3.4",
+        "НМШ4-530",
+        "НМШ4-600",
+        "НМШ4-2400",
+        "НМШ4-3000",
+        "НМШМ4-250",
+        "НМШМ4-500"
+    )
+    val rel2 = observableListOf(
+        "РЭЛ2-2400",
+        "РЭЛ2М-1000"
+    )
 
     companion object {
         private val logger = LoggerFactory.getLogger(MainView::class.java)
@@ -73,6 +144,39 @@ class MainView : View("Комплексный стенд проверки рел
     }
 
     override fun onDock() {
+        selectedItemProperty.onChange {
+            when (it) {
+                "НМШ1" -> {
+                    comboBoxTestItem.items = nmsh1
+                }
+                "НМШ2" -> {
+                    comboBoxTestItem.items = nmsh2
+                }
+                "НМШ3" -> {
+                    comboBoxTestItem.items = nmsh3
+                }
+                "НМШ4" -> {
+                    comboBoxTestItem.items = nmsh4
+                }
+                "АНШ2" -> {
+                    comboBoxTestItem.items = ansh2
+                }
+                "РЭЛ1" -> {
+                    comboBoxTestItem.items = rel1
+                }
+                "РЭЛ2" -> {
+                    comboBoxTestItem.items = rel2
+                }
+                else -> {
+                    comboBoxTestItem.items = observableListOf()
+                }
+            }
+            runLater {
+                comboBoxTestItem.show()
+                comboBoxTestItem.hide()
+            }
+        }
+
         controller.refreshObjectsTypes()
         comboBoxTestItem.selectionModel.selectFirst()
     }
@@ -82,7 +186,11 @@ class MainView : View("Комплексный стенд проверки рел
             mainMenubar = menubar {
                 menu("Меню") {
                     item("Очистить") {
-                        action {}
+                        action {
+                            textFieldSerialNumber.text = ""
+                            comboBoxTestItem.selectionModel.clearSelection()
+                            comboBoxTypeItem.selectionModel.clearSelection()
+                        }
                     }
                     item("Выход") {
                         action {
@@ -101,37 +209,15 @@ class MainView : View("Комплексный стенд проверки рел
                             )
                         }
                     }
-                    item("Протоколы") {
-                        action {
-                            find<ProtocolListWindow>().openModal(
-                                modality = Modality.APPLICATION_MODAL,
-                                escapeClosesWindow = true,
-                                resizable = false,
-                                owner = this@MainView.currentWindow
-                            )
+                    menu("Информация") {
+                        item("Версия ПО") {
+                            action {
+                                controller.showAboutUs()
+                            }
                         }
                     }
-                }
-                menu("Отладка") {
-                    item("Связь с приборами") {
-                        action {
-                            find<DevicesView>().openModal(
-                                modality = Modality.APPLICATION_MODAL,
-                                escapeClosesWindow = true,
-                                resizable = false,
-                                owner = this@MainView.currentWindow
-                            )
-                        }
-                    }
-                }
-                menu("Информация") {
-                    item("Версия ПО") {
-                        action {
-                            controller.showAboutUs()
-                        }
-                    }
-                }
-            }.addClass(megaHard)
+                }.addClass(megaHard)
+            }
         }
         center {
             tabpane {
@@ -155,15 +241,15 @@ class MainView : View("Комплексный стенд проверки рел
                                     label("Серийный номер:")
                                     textFieldSerialNumber = textfield {
                                         prefWidth = 640.0
-                                        text = "1234"
+                                        text = ""
                                     }
-                                    label("Выберите тип реле:")
-                                    combobox<String> {
-                                        items = observableListOf("1", "2", "3", "4")
-                                        selectionModel.selectFirst()
+                                    label("Выбор типа реле:")
+                                    comboBoxTypeItem = combobox(selectedItemProperty) {
+                                        items = observableListOf("НМШ1", "НМШ2", "НМШ3", "НМШ4", "АНШ2", "РЭЛ1", "РЭЛ2")
+                                        selectionModel.clearSelection()
                                         prefWidth = 640.0
                                     }
-                                    label("Выберите реле:")
+                                    label("Выбор модели реле:")
                                     comboBoxTestItem = combobox {
                                         prefWidth = 640.0
                                     }
@@ -171,36 +257,33 @@ class MainView : View("Комплексный стенд проверки рел
                                 vbox(spacing = 16.0) {
                                     alignmentProperty().set(Pos.CENTER_LEFT)
                                     label("Выберите опыты:")
-//                            checkbox("Выбрать все") {
-//
-//                            }
-//                                    buttonSelectAll = button("Выбрать все") {
-//                                        action {
-//                                            if (text == "Выбрать все") {
-//                                                checkBoxTest1.isSelected = true
-//                                                checkBoxTest2.isSelected = true
-//                                                checkBoxTest3.isSelected = true
-//                                                checkBoxTest4.isSelected = true
-//                                                checkBoxTest5.isSelected = true
-//                                                checkBoxTest6.isSelected = true
-//                                                text = "Развыбрать все"
-//                                            } else {
-//                                                checkBoxTest1.isSelected = false
-//                                                checkBoxTest2.isSelected = false
-//                                                checkBoxTest3.isSelected = false
-//                                                checkBoxTest4.isSelected = false
-//                                                checkBoxTest5.isSelected = false
-//                                                checkBoxTest6.isSelected = false
-//                                                text = "Выбрать все"
-//                                            }
-//                                        }
-//                                    }
-                                    checkBoxTest1 = checkbox("1. ИКАС катушки") {}
-                                    checkBoxTest2 = checkbox("2. ИКАС (переходного контакта NO)") {}
-                                    checkBoxTest3 = checkbox("3. ИКАС (переходного контакта NC)") {}
-                                    checkBoxTest4 = checkbox("4. Опыт минимального срабатывания реле") {}
-                                    checkBoxTest5 = checkbox("5. Опыт максимального отпускания реле") {}
+                                    checkBoxTest1 = checkbox("1. Сопротивление катушек") {}
+                                    checkBoxTest2 = checkbox("2. КПС НО контактов") {}
+                                    checkBoxTest3 = checkbox("3. КПС НЗ контактов") {}
+                                    checkBoxTest4 = checkbox("4. Напряжение(ток) срабатывания реле") {}
+                                    checkBoxTest5 = checkbox("5. Напряжение(ток) отпускания реле") {}
                                     checkBoxTest6 = checkbox("6. Время размыкания реле") {}
+                                    buttonSelectAll = button("Выбрать все") {
+                                        action {
+                                            if (text == "Выбрать все") {
+                                                checkBoxTest1.isSelected = true
+                                                checkBoxTest2.isSelected = true
+                                                checkBoxTest3.isSelected = true
+                                                checkBoxTest4.isSelected = true
+                                                checkBoxTest5.isSelected = true
+                                                checkBoxTest6.isSelected = true
+                                                text = "Снять все"
+                                            } else {
+                                                checkBoxTest1.isSelected = false
+                                                checkBoxTest2.isSelected = false
+                                                checkBoxTest3.isSelected = false
+                                                checkBoxTest4.isSelected = false
+                                                checkBoxTest5.isSelected = false
+                                                checkBoxTest6.isSelected = false
+                                                text = "Выбрать все"
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             buttonStart = button("Запустить") {
@@ -225,7 +308,7 @@ class MainView : View("Комплексный стенд проверки рел
                             }
                             alignment = Pos.CENTER
 
-                            tableview(controller.tableValuesTest1) {
+                            tableView1Result = tableview(controller.tableValuesTest1) {
                                 minHeight = 146.0
                                 maxHeight = 146.0
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
@@ -236,9 +319,9 @@ class MainView : View("Комплексный стенд проверки рел
                                 column("R2, Ом", TableValuesTest1::resistanceCoil2.getter)
                                 column("Результат", TableValuesTest1::result.getter)
                             }
-                            tableview(controller.tableValuesTest2) {
-                                minHeight = 146.0
-                                maxHeight = 146.0
+                            tableView2Result = tableview(controller.tableValuesTest2) {
+                                minHeight = 96.0
+                                maxHeight = 96.0
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
@@ -253,9 +336,9 @@ class MainView : View("Комплексный стенд проверки рел
                                 column("R8, Ом", TableValuesTest2::resistanceContactGroup8.getter)
                                 column("Результат", TableValuesTest2::result.getter)
                             }
-                            tableview(controller.tableValuesTest3) {
-                                minHeight = 146.0
-                                maxHeight = 146.0
+                            tableView3Result = tableview(controller.tableValuesTest3) {
+                                minHeight = 98.0
+                                maxHeight = 96.0
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
@@ -270,27 +353,27 @@ class MainView : View("Комплексный стенд проверки рел
                                 column("R8, Ом", TableValuesTest3::resistanceContactGroupNC8.getter)
                                 column("Результат", TableValuesTest3::result.getter)
                             }
-                            tableview(controller.tableValuesTest4) {
+                            tableView4Result = tableview(controller.tableValuesTest4) {
                                 minHeight = 146.0
                                 maxHeight = 146.0
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
                                 column("", TableValuesTest4::descriptor.getter)
-                                column("U, В", TableValuesTest4::voltage.getter)
+                                column("", TableValuesTest4::voltage.getter)
                                 column("Результат", TableValuesTest4::result.getter)
                             }
-                            tableview(controller.tableValuesTest5) {
+                            tableView5Result = tableview(controller.tableValuesTest5) {
                                 minHeight = 146.0
                                 maxHeight = 146.0
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
                                 column("", TableValuesTest5::descriptor.getter)
-                                column("U, В", TableValuesTest5::voltage.getter)
+                                column("", TableValuesTest5::voltage.getter)
                                 column("Результат", TableValuesTest5::result.getter)
                             }
-                            tableview(controller.tableValuesTest6) {
+                            tableView6Result = tableview(controller.tableValuesTest6) {
                                 minHeight = 146.0
                                 maxHeight = 146.0
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY

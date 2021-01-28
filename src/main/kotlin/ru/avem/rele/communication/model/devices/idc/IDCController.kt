@@ -2,9 +2,10 @@ package ru.avem.rele.communication.model.devices.idc
 
 import ru.avem.kserialpooler.communication.adapters.modbusrtu.ModbusRTUAdapter
 import ru.avem.kserialpooler.communication.utils.TransportException
-import ru.avem.rele.communication.adapters.stringascii.StringASCIIAdapter
+import ru.avem.kserialpooler.communication.utils.toHexStr
 import ru.avem.rele.communication.model.DeviceRegister
 import ru.avem.rele.communication.model.IDeviceController
+
 
 class IDCController(
     override val name: String,
@@ -12,7 +13,7 @@ class IDCController(
     override val id: Byte
 ) : IDeviceController {
     val model = IDCModel()
-    override var isResponding = false
+    override var isResponding = true //TODO
     override var requestTotalCount = 0
     override var requestSuccessCount = 0
     override fun readRegister(register: DeviceRegister) {
@@ -27,14 +28,22 @@ class IDCController(
     override val writingRegisters = mutableListOf<Pair<DeviceRegister, Number>>()
     override val pollingMutex = Any()
 
-    companion object {
-    }
 
-
-    override fun readRequest(request: String): Int {
+    override fun readRequest(request: String): String {
         val requestString = StringBuilder()
         requestString.append("A00").append(id).append(" ").append(request).append("\n")
-        return protocolAdapter.connection.read(requestString.toString().toByteArray())
+        protocolAdapter.connection.write(requestString.toString().toByteArray())
+        val inputBytes = ByteArray(13)
+        protocolAdapter.connection.read(inputBytes).toString()
+        val output = StringBuilder()
+        val toHexStr = toHexStr(inputBytes).replace(" ", "")
+        var i = 0
+        while (i < toHexStr.length) {
+            val str: String = toHexStr.substring(i, i + 2)
+            output.append(str.toInt(16).toChar())
+            i += 2
+        }
+        return output.dropLast(1).toString()
     }
 
     override fun readAllRegisters() {
@@ -51,7 +60,6 @@ class IDCController(
         val requestString = StringBuilder()
         requestString.append("A00").append(id).append(" ").append(request).append("\n")
         protocolAdapter.connection.write(requestString.toString().toByteArray())
-//        sleep(300)
     }
 
     override fun checkResponsibility() {
@@ -89,9 +97,16 @@ class IDCController(
         writeRequest("SOUR:CURR $current")
     }
 
-
-    fun getVolatage(): Int {
-        return readRequest("MEASure:VOLTage?")
+    fun getVoltage(): Double {
+        return readRequest("MEASure:VOLTage?").toDouble()
     }
 
+    fun getCurrent(): Double {
+        return readRequest("MEASure:CURRent?").toDouble()
+    }
+
+//    var voltage = idcGV1.getVoltage()
+//    appendMessageToLog(LogTag.MESSAGE, "voltage = ${formatRealNumber(voltage)}")
+//    var current = idcGV1.getCurrent()
+//    appendMessageToLog(LogTag.MESSAGE, "current = ${String.format("%.4f", formatRealNumber(current))}")
 }

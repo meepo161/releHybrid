@@ -60,29 +60,34 @@ class ReleController(
     }
 
     override fun <T : Number> writeRegister(register: DeviceRegister, value: T) {
-        when (value) {
-            is Float -> {
-                val bb = ByteBuffer.allocate(4).putFloat(value).order(ByteOrder.LITTLE_ENDIAN)
-                val registers = listOf(ModbusRegister(bb.getShort(2)), ModbusRegister(bb.getShort(0)))
-                transactionWithAttempts {
-                    protocolAdapter.presetMultipleRegisters(id, register.address, registers)
+        isResponding = try {
+            when (value) {
+                is Float -> {
+                    val bb = ByteBuffer.allocate(4).putFloat(value).order(ByteOrder.LITTLE_ENDIAN)
+                    val registers = listOf(ModbusRegister(bb.getShort(2)), ModbusRegister(bb.getShort(0)))
+                    transactionWithAttempts {
+                        protocolAdapter.presetMultipleRegisters(id, register.address, registers)
+                    }
+                }
+                is Int -> {
+                    val bb = ByteBuffer.allocate(4).putInt(value).order(ByteOrder.LITTLE_ENDIAN)
+                    val registers = listOf(ModbusRegister(bb.getShort(2)), ModbusRegister(bb.getShort(0)))
+                    transactionWithAttempts {
+                        protocolAdapter.presetMultipleRegisters(id, register.address, registers)
+                    }
+                }
+                is Short -> {
+                    transactionWithAttempts {
+                        protocolAdapter.presetSingleRegister(id, register.address, ModbusRegister(value))
+                    }
+                }
+                else -> {
+                    throw UnsupportedOperationException("Method can handle only with Float, Int and Short")
                 }
             }
-            is Int -> {
-                val bb = ByteBuffer.allocate(4).putInt(value).order(ByteOrder.LITTLE_ENDIAN)
-                val registers = listOf(ModbusRegister(bb.getShort(2)), ModbusRegister(bb.getShort(0)))
-                transactionWithAttempts {
-                    protocolAdapter.presetMultipleRegisters(id, register.address, registers)
-                }
-            }
-            is Short -> {
-                transactionWithAttempts {
-                    protocolAdapter.presetSingleRegister(id, register.address, ModbusRegister(value))
-                }
-            }
-            else -> {
-                throw UnsupportedOperationException("Method can handle only with Float, Int and Short")
-            }
+            true
+        } catch (e: TransportException) {
+            false
         }
     }
 

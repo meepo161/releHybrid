@@ -12,7 +12,6 @@ import tornadofx.controlsfx.warningNotification
 
 class ObjectTypeEditorController : Controller() {
     private val window: ObjectTypeEditorWindow by inject()
-    private val mainView: MainViewController by inject()
 
     private fun areFieldsValid(): Boolean {
         if (isValuesEmpty()) {
@@ -83,10 +82,5 @@ class ObjectTypeEditorController : Controller() {
         return transaction {
             TestObjectsType.all().toList().asObservable()
         }
-    }
-
-    private fun clearViews() {
-        window.textfieldPressure.clear()
-        window.textfieldTime.clear()
     }
 }

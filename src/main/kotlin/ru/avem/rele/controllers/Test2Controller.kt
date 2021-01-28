@@ -6,39 +6,21 @@ import javafx.scene.text.Text
 import ru.avem.rele.communication.model.CommunicationModel
 import ru.avem.rele.communication.model.devices.avem.ikas.Ikas8Model
 import ru.avem.rele.entities.TableValuesTest2
-import ru.avem.rele.utils.BREAK_IKAS
-import ru.avem.rele.utils.LogTag
-import ru.avem.rele.utils.Singleton.currentTestItem
-import ru.avem.rele.utils.State
-import ru.avem.rele.utils.formatRealNumber
+import ru.avem.rele.utils.*
 import ru.avem.rele.view.Test2View
 import tornadofx.add
 import tornadofx.clear
-import tornadofx.observableList
+import tornadofx.observableListOf
 import tornadofx.style
 import java.lang.Thread.sleep
 import java.text.SimpleDateFormat
 import kotlin.concurrent.thread
 
 class Test2Controller : TestController() {
-    private lateinit var factoryNumber: String
     val view: Test2View by inject()
     val controller: MainViewController by inject()
 
-    var tableValues = observableList(
-        TableValuesTest2(
-            SimpleStringProperty("Заданные"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("")
-        ),
-
+    var tableValues = observableListOf(
         TableValuesTest2(
             SimpleStringProperty("Измеренные"),
             SimpleStringProperty("0.0"),
@@ -54,25 +36,22 @@ class Test2Controller : TestController() {
     )
 
     @Volatile
-    private var isIkasResponding: Boolean = false
-
-    @Volatile
     var isExperimentRunning: Boolean = false
 
     @Volatile
     var isExperimentEnded: Boolean = true
 
     @Volatile
-    private var ikasReadyParam: Float = 0f
+    private var testItemSerial: String = ""
+
+    @Volatile
+    private var testItemVoltageNom: Double = 0.0
 
     @Volatile
     private var measuringR: Float = 0f
 
     @Volatile
     private var statusIkas: Float = 0f
-
-    @Volatile
-    private var testItemR: Double = 0.0
 
     @Volatile
     private var measuringR1: Double = 0.0
@@ -99,10 +78,13 @@ class Test2Controller : TestController() {
     private var measuringR8: Double = 0.0
 
     @Volatile
-    private var openContact = true
-
-    @Volatile
-    private var cause: String = ""
+    var cause: String = ""
+        set(value) {
+            if (value != "") {
+                isExperimentRunning = false
+            }
+            field = value
+        }
 
 
     fun clearTable() {
@@ -125,14 +107,6 @@ class Test2Controller : TestController() {
     }
 
     fun fillTableByEO() {
-        tableValues[0].resistanceContactGroup1.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup2.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup3.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup4.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup5.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup6.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup7.value = currentTestItem.resistanceContactGroup
-        tableValues[0].resistanceContactGroup8.value = currentTestItem.resistanceContactGroup
     }
 
     fun setExperimentProgress(currentTime: Int, time: Int = 1) {
@@ -162,16 +136,7 @@ class Test2Controller : TestController() {
         } else {
             view.circleComStatus.fill = State.BAD.c
         }
-        return true
-//        return ikasPR1.isResponding
-    }
-
-    fun setCause(cause: String) {
-        this.cause = cause
-        if (cause.isNotEmpty()) {
-            isExperimentRunning = false
-        }
-        view.buttonStartStopTest.isDisable = true
+        return ikas1.isResponding
     }
 
     private fun startPollDevices() {
@@ -183,30 +148,41 @@ class Test2Controller : TestController() {
         }
     }
 
+
     fun startTest() {
-        thread {
+        thread(isDaemon = true) {
+            sleep(400)
             cause = ""
-            testItemR = currentTestItem.resistanceCoil.toDouble()
+            clearLog()
+            clearTable()
+
+            appendMessageToLog(LogTag.MESSAGE, "Начало испытания")
+            cause = ""
             Platform.runLater {
                 view.buttonBack.isDisable = true
                 view.buttonStartStopTest.text = "Остановить"
                 view.buttonNextTest.isDisable = true
             }
 
+            if (CommunicationModel.checkDevices().isNotEmpty()) {
+                cause = "Не отвечают : ${CommunicationModel.checkDevices()}"
+            }
+
             startPollDevices()
             isExperimentRunning = true
             isExperimentEnded = false
 
-            clearLog()
-            clearTable()
+            testItemSerial = Singleton.currentTestItem.serialNumber
+            testItemVoltageNom = Singleton.currentTestItem.voltageOrCurrentNom.replace(",", ".").toDouble()
 
             appendMessageToLog(LogTag.DEBUG, "Инициализация устройств")
-            appendMessageToLog(LogTag.DEBUG, "Подготовка стенда")
-
             while (!isDevicesResponding() && isExperimentRunning) {
                 CommunicationModel.checkDevices()
                 sleep(100)
             }
+            appendMessageToLog(LogTag.DEBUG, "Подготовка стенда")
+            appendMessageToLog(LogTag.DEBUG, "Ожидание...")
+
 
             if (isExperimentRunning && isDevicesResponding()) {
                 ikas1.stopSerialMeasuring()
@@ -217,7 +193,33 @@ class Test2Controller : TestController() {
                 offAllRele()
             }
 
-            startOpenContactTest()
+            when (Singleton.currentTestItemType) {
+                "НМШ1" -> {
+                    nmsh1()
+                }
+                "НМШ2" -> {
+                    nmsh2()
+                }
+                "НМШ3" -> {
+                    nmsh3()
+                }
+                "НМШ4" -> {
+                    nmsh4()
+                }
+                "АНШ2" -> {
+                    ansh2()
+                }
+                "РЭЛ1" -> {
+                    rel1()
+                }
+                "РЭЛ2" -> {
+
+                }
+                else -> {
+                    Toast.makeText("Ошибка, нет такого типа объекта испытания").show(Toast.ToastType.ERROR)
+                }
+            }
+
 
             ikas1.stopSerialMeasuring()
             setResult()
@@ -225,28 +227,987 @@ class Test2Controller : TestController() {
             isExperimentRunning = false
             isExperimentEnded = true
 
+            controller.tableValuesTest2[0].resistanceContactGroup1.value = tableValues[0].resistanceContactGroup1.value
+            controller.tableValuesTest2[0].resistanceContactGroup2.value = tableValues[0].resistanceContactGroup2.value
+            controller.tableValuesTest2[0].resistanceContactGroup3.value = tableValues[0].resistanceContactGroup3.value
+            controller.tableValuesTest2[0].resistanceContactGroup4.value = tableValues[0].resistanceContactGroup4.value
+            controller.tableValuesTest2[0].resistanceContactGroup5.value = tableValues[0].resistanceContactGroup5.value
+            controller.tableValuesTest2[0].resistanceContactGroup6.value = tableValues[0].resistanceContactGroup6.value
+            controller.tableValuesTest2[0].resistanceContactGroup7.value = tableValues[0].resistanceContactGroup7.value
+            controller.tableValuesTest2[0].resistanceContactGroup8.value = tableValues[0].resistanceContactGroup8.value
+            controller.tableValuesTest2[0].result.value = tableValues[0].result.value
+
             Platform.runLater {
                 view.buttonBack.isDisable = false
                 view.buttonStartStopTest.text = "Старт"
                 view.buttonStartStopTest.isDisable = false
                 view.buttonNextTest.isDisable = false
             }
+            if (controller.auto) {
+                view.startNextExperiment()
+            }
         }
     }
 
-
-    private fun startOpenContactTest() {
-
+    private fun ansh2() {
         if (isExperimentRunning && isDevicesResponding()) {
             idcGV1.remoteControl()
             idcGV1.offVoltage()
-            idcGV1.setVoltage(24.0)
+            idcGV1.setVoltage(testItemVoltageNom)
             idcGV1.setMaxCurrent(1.0)
             idcGV1.onVoltage()
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Сбор схемы для нормально открытых контактов")
+            rele1.on(1)
+            rele1.on(4)
+            rele3.on(9)
+            rele1.on(18)
+            rele3.on(8)
+            rele1.on(20)
+            rele1.on(15)
+            rele1.on(26)
+            rele1.on(31)
+            rele3.on(1)
+            rele3.on(2)
+            rele3.on(3)
+            rele3.on(4)
+            rele3.on(10)
+            rele3.on(11)
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(21)
+            rele2.on(22)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR1 = formatRealNumber(measuringR.toDouble())
+            if (measuringR1 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup1.value = measuringR1.toString()
+            } else {
+                tableValues[0].resistanceContactGroup1.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(22)
+            rele2.off(21)
+            tableValues[0].resistanceContactGroup2.value = "-.--"
+        }
+
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(27)
+            rele2.on(28)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR3 = formatRealNumber(measuringR.toDouble())
+            if (measuringR3 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup3.value = measuringR3.toString()
+            } else {
+                tableValues[0].resistanceContactGroup3.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(27)
+            rele2.off(28)
+            tableValues[0].resistanceContactGroup4.value = "-.--"
+        }
+
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(15)
+            rele2.on(16)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR5 = formatRealNumber(measuringR.toDouble())
+            if (measuringR5 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup5.value = measuringR5.toString()
+            } else {
+                tableValues[0].resistanceContactGroup5.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(15)
+            rele2.off(16)
+            tableValues[0].resistanceContactGroup6.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(9)
+            rele2.on(10)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR7 = formatRealNumber(measuringR.toDouble())
+            if (measuringR7 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup7.value = measuringR7.toString()
+            } else {
+                tableValues[0].resistanceContactGroup7.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(9)
+            rele2.off(10)
+            tableValues[0].resistanceContactGroup8.value = "-.--"
+        }
+
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.offVoltage()
+            offAllRele()
+        }
+    }
+
+    private fun nmsh1() {
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.remoteControl()
+            idcGV1.offVoltage()
+            idcGV1.setVoltage(testItemVoltageNom)
+            idcGV1.setMaxCurrent(1.0)
+            idcGV1.onVoltage()
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele1.on(1)
+            rele1.on(4)
+//            rele1.on(7)
+//            rele1.on(10)
+            rele1.on(17)
+            rele1.on(18)
+            rele1.on(19)
+            rele1.on(20)
+            rele1.on(25)
+            rele1.on(26)
+            rele1.on(27)
+
+            rele3.on(1)
+            rele3.on(2)
+            rele3.on(3)
+            rele3.on(4)
+            rele3.on(11)
+            rele3.on(10)
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(22)
+            rele2.on(21)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR1 = formatRealNumber(measuringR.toDouble())
+            if (measuringR1 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup1.value = measuringR1.toString()
+            } else {
+                tableValues[0].resistanceContactGroup1.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(22)
+            rele2.off(21)
+            rele2.on(24)
+            rele2.on(25)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR2 = formatRealNumber(measuringR.toDouble())
+            if (measuringR2 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup2.value = measuringR2.toString()
+            } else {
+                tableValues[0].resistanceContactGroup2.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(24)
+            rele2.off(25)
+            rele2.on(27)
+            rele2.on(28)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR3 = formatRealNumber(measuringR.toDouble())
+            if (measuringR3 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup3.value = measuringR3.toString()
+            } else {
+                tableValues[0].resistanceContactGroup3.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(27)
+            rele2.off(28)
+            rele2.on(30)
+            rele2.on(31)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR4 = formatRealNumber(measuringR.toDouble())
+            if (measuringR4 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup4.value = measuringR4.toString()
+            } else {
+                tableValues[0].resistanceContactGroup4.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(30)
+            rele2.off(31)
+            rele2.on(15)
+            rele2.on(16)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR5 = formatRealNumber(measuringR.toDouble())
+            if (measuringR5 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup5.value = measuringR5.toString()
+            } else {
+                tableValues[0].resistanceContactGroup5.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(15)
+            rele2.off(16)
+            rele2.on(12)
+            rele2.on(13)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR6 = formatRealNumber(measuringR.toDouble())
+            if (measuringR6 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup6.value = measuringR6.toString()
+            } else {
+                tableValues[0].resistanceContactGroup6.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(12)
+            rele2.off(13)
+            rele2.on(9)
+            rele2.on(10)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR7 = formatRealNumber(measuringR.toDouble())
+            if (measuringR7 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup7.value = measuringR7.toString()
+            } else {
+                tableValues[0].resistanceContactGroup7.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(9)
+            rele2.off(10)
+            rele2.on(6)
+            rele2.on(7)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR8 = formatRealNumber(measuringR.toDouble())
+            if (measuringR8 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup8.value = measuringR8.toString()
+            } else {
+                tableValues[0].resistanceContactGroup8.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.offVoltage()
+            offAllRele()
+        }
+    }
+
+    private fun nmsh2() {
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.remoteControl()
+            idcGV1.offVoltage()
+            idcGV1.setVoltage(testItemVoltageNom)
+            idcGV1.setMaxCurrent(1.0)
+            idcGV1.onVoltage()
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele1.on(1)
+            rele1.on(4)
+            rele1.on(17)
+            rele1.on(18)
+            rele3.on(7)
+            rele1.on(19)
+            rele1.on(20)
+            rele1.on(14)
+            rele1.on(25)
+            rele1.on(26)
+            rele1.on(32)
+            rele1.on(27)
+            rele3.on(1)
+            rele3.on(2)
+            rele3.on(3)
+            rele3.on(4)
+            rele3.on(6)
+            rele3.on(10)
+            rele3.on(11)
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            tableValues[0].resistanceContactGroup1.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(24)
+            rele2.on(25)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR2 = formatRealNumber(measuringR.toDouble())
+            if (measuringR2 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup2.value = measuringR2.toString()
+            } else {
+                tableValues[0].resistanceContactGroup2.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(24)
+            rele2.off(25)
+            tableValues[0].resistanceContactGroup3.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(30)
+            rele2.on(31)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR4 = formatRealNumber(measuringR.toDouble())
+            if (measuringR4 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup4.value = measuringR4.toString()
+            } else {
+                tableValues[0].resistanceContactGroup4.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(30)
+            rele2.off(31)
+            tableValues[0].resistanceContactGroup5.value = "-.--"
+        }
+
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(12)
+            rele2.on(13)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR6 = formatRealNumber(measuringR.toDouble())
+            if (measuringR6 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup6.value = measuringR6.toString()
+            } else {
+                tableValues[0].resistanceContactGroup6.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(12)
+            rele2.off(13)
+            tableValues[0].resistanceContactGroup7.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(6)
+            rele2.on(7)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR8 = formatRealNumber(measuringR.toDouble())
+            if (measuringR8 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup8.value = measuringR8.toString()
+            } else {
+                tableValues[0].resistanceContactGroup8.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.offVoltage()
+            offAllRele()
+        }
+    }
+
+    private fun nmsh3() {
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.remoteControl()
+            idcGV1.offVoltage()
+            idcGV1.setVoltage(testItemVoltageNom)
+            idcGV1.setMaxCurrent(1.0)
+            idcGV1.onVoltage()
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele1.on(1)
+            rele1.on(4)
+            rele1.on(17)
+            rele1.on(18)
+            rele3.on(7)
+            rele1.on(19)
+            rele1.on(20)
+            rele1.on(14)
+            rele1.on(25)
+            rele1.on(26)
+            rele1.on(32)
+            rele1.on(27)
+            rele3.on(1)
+            rele3.on(2)
+            rele3.on(3)
+            rele3.on(4)
+            rele3.on(6)
+            rele3.on(10)
+            rele3.on(11)
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            tableValues[0].resistanceContactGroup1.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(24)
+            rele2.on(25)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR2 = formatRealNumber(measuringR.toDouble())
+            if (measuringR2 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup2.value = measuringR2.toString()
+            } else {
+                tableValues[0].resistanceContactGroup2.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(24)
+            rele2.off(25)
+            tableValues[0].resistanceContactGroup3.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(30)
+            rele2.on(31)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR4 = formatRealNumber(measuringR.toDouble())
+            if (measuringR4 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup4.value = measuringR4.toString()
+            } else {
+                tableValues[0].resistanceContactGroup4.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(30)
+            rele2.off(31)
+            tableValues[0].resistanceContactGroup5.value = "-.--"
+        }
+
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(12)
+            rele2.on(13)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR6 = formatRealNumber(measuringR.toDouble())
+            if (measuringR6 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup6.value = measuringR6.toString()
+            } else {
+                tableValues[0].resistanceContactGroup6.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(12)
+            rele2.off(13)
+            tableValues[0].resistanceContactGroup7.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(6)
+            rele2.on(7)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR8 = formatRealNumber(measuringR.toDouble())
+            if (measuringR8 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup8.value = measuringR8.toString()
+            } else {
+                tableValues[0].resistanceContactGroup8.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.offVoltage()
+            offAllRele()
+        }
+    }
+
+    private fun nmsh4() {
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.remoteControl()
+            idcGV1.offVoltage()
+            idcGV1.setVoltage(testItemVoltageNom)
+            idcGV1.setMaxCurrent(1.0)
+            idcGV1.onVoltage()
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele1.on(1)
+            rele1.on(4)
+            rele1.on(17)
+            rele1.on(18)
+            rele1.on(19)
+            rele1.on(20)
+            rele1.on(25)
+            rele1.on(26)
+            rele1.on(27)
+            rele3.on(1)
+            rele3.on(2)
+            rele3.on(3)
+            rele3.on(4)
+            rele3.on(11)
+            rele3.on(10)
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(21)
+            rele2.on(22)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR1 = formatRealNumber(measuringR.toDouble())
+            if (measuringR1 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup1.value = measuringR1.toString()
+            } else {
+                tableValues[0].resistanceContactGroup1.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(22)
+            rele2.off(21)
+            rele2.on(24)
+            rele2.on(25)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR2 = formatRealNumber(measuringR.toDouble())
+            if (measuringR2 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup2.value = measuringR2.toString()
+            } else {
+                tableValues[0].resistanceContactGroup2.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(24)
+            rele2.off(25)
+            rele2.on(27)
+            rele2.on(28)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR3 = formatRealNumber(measuringR.toDouble())
+            if (measuringR3 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup3.value = measuringR3.toString()
+            } else {
+                tableValues[0].resistanceContactGroup3.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(27)
+            rele2.off(28)
+            rele2.on(30)
+            rele2.on(31)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR4 = formatRealNumber(measuringR.toDouble())
+            if (measuringR4 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup4.value = measuringR4.toString()
+            } else {
+                tableValues[0].resistanceContactGroup4.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(30)
+            rele2.off(31)
+            rele2.on(15)
+            rele2.on(16)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR5 = formatRealNumber(measuringR.toDouble())
+            if (measuringR5 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup5.value = measuringR5.toString()
+            } else {
+                tableValues[0].resistanceContactGroup5.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(15)
+            rele2.off(16)
+            rele2.on(12)
+            rele2.on(13)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR6 = formatRealNumber(measuringR.toDouble())
+            if (measuringR6 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup6.value = measuringR6.toString()
+            } else {
+                tableValues[0].resistanceContactGroup6.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(12)
+            rele2.off(13)
+            rele2.on(9)
+            rele2.on(10)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR7 = formatRealNumber(measuringR.toDouble())
+            if (measuringR7 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup7.value = measuringR7.toString()
+            } else {
+                tableValues[0].resistanceContactGroup7.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(9)
+            rele2.off(10)
+            rele2.on(6)
+            rele2.on(7)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR8 = formatRealNumber(measuringR.toDouble())
+            if (measuringR8 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup8.value = measuringR8.toString()
+            } else {
+                tableValues[0].resistanceContactGroup8.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.offVoltage()
+            offAllRele()
+        }
+    }
+
+    private fun rel1() {
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.remoteControl()
+            idcGV1.offVoltage()
+            idcGV1.setVoltage(testItemVoltageNom)
+            idcGV1.setMaxCurrent(1.0)
+            idcGV1.onVoltage()
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
             rele1.on(1)
             rele1.on(4)
 //            rele1.on(7)
@@ -268,233 +1229,341 @@ class Test2Controller : TestController() {
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления первой контактной группы")
             rele2.on(22)
             rele2.on(21)
-            sleep(2000)
+            sleep(500)
             ikas1.startSerialMeasuring()
-            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
         while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
             sleep(100)
             if (statusIkas == 138f) {
-                setCause("Ошибка 138")
+                cause = "Ошибка 138"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
             measuringR1 = formatRealNumber(measuringR.toDouble())
             if (measuringR1 != BREAK_IKAS) {
-                tableValues[1].resistanceContactGroup1.value = measuringR1.toString()
+                tableValues[0].resistanceContactGroup1.value = measuringR1.toString()
             } else {
-                tableValues[1].resistanceContactGroup1.value = "Обрыв"
+                tableValues[0].resistanceContactGroup1.value = "-.--"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления второй контактной группы")
             rele2.off(22)
             rele2.off(21)
             rele2.on(24)
             rele2.on(25)
-            sleep(2000)
+            sleep(500)
             ikas1.startSerialMeasuring()
-            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
         while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
             sleep(100)
             if (statusIkas == 138f) {
-                setCause("Ошибка 138")
+                cause = "Ошибка 138"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
             measuringR2 = formatRealNumber(measuringR.toDouble())
             if (measuringR2 != BREAK_IKAS) {
-                tableValues[1].resistanceContactGroup2.value = measuringR2.toString()
+                tableValues[0].resistanceContactGroup2.value = measuringR2.toString()
             } else {
-                tableValues[1].resistanceContactGroup2.value = "Обрыв"
+                tableValues[0].resistanceContactGroup2.value = "-.--"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления третьей контактной группы")
             rele2.off(24)
             rele2.off(25)
             rele2.on(27)
             rele2.on(28)
-            sleep(2000)
+            sleep(500)
             ikas1.startSerialMeasuring()
-            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
         while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
             sleep(100)
             if (statusIkas == 138f) {
-                setCause("Ошибка 138")
+                cause = "Ошибка 138"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             measuringR3 = formatRealNumber(measuringR.toDouble())
             if (measuringR3 != BREAK_IKAS) {
-                tableValues[1].resistanceContactGroup3.value = measuringR3.toString()
+                tableValues[0].resistanceContactGroup3.value = measuringR3.toString()
             } else {
-                tableValues[1].resistanceContactGroup3.value = "Обрыв"
+                tableValues[0].resistanceContactGroup3.value = "-.--"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-//            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления четвертой контактной группы")
             rele2.off(27)
             rele2.off(28)
-//            rele2.on(30)
-//            rele2.on(31)
-//            sleep(2000)
-//            ikas1.startSerialMeasuring()
-//            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
-//        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
-//            sleep(100)
-//            if (statusIkas == 138f) {
-//                setCause("Ошибка 138")
-//            }
-//        }
-//
-//        if (isExperimentRunning && isDevicesResponding()) {
-//            measuringR4 = formatRealNumber(measuringR.toDouble())
-//            if (measuringR4 != BREAK_IKAS) {
-//                tableValues[1].resistanceContactGroup4.value = measuringR4.toString()
-//            } else {
-                tableValues[1].resistanceContactGroup4.value = "-.--"
-//            }
-//        }
-
-//        if (isExperimentRunning && isDevicesResponding()) {
-//            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления пятой контактной группы")
-//            rele2.off(30)
-//            rele2.off(31)
-//            rele2.on(15)
-//            rele2.on(16)
-//            sleep(2000)
-//            ikas1.startSerialMeasuring()
-//            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
-//        }
-//
-//        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
-//            sleep(100)
-//            if (statusIkas == 138f) {
-//                setCause("Ошибка 138")
-//            }
-//        }
-//
-//        if (isExperimentRunning && isDevicesResponding()) {
-//            measuringR5 = formatRealNumber(measuringR.toDouble())
-//            if (measuringR5 != BREAK_IKAS) {
-//                tableValues[1].resistanceContactGroup5.value = measuringR5.toString()
-//            } else {
-                tableValues[1].resistanceContactGroup5.value = "-.--"
-//            }
-//        }
-
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления шестой контактной группы")
-//            rele2.off(15)
-//            rele2.off(16)
+            tableValues[0].resistanceContactGroup4.value = "-.--"
+        }
+        if (isExperimentRunning && isDevicesResponding()) {
+            tableValues[0].resistanceContactGroup5.value = "-.--"
+        }
+        if (isExperimentRunning && isDevicesResponding()) {
             rele2.on(12)
             rele2.on(13)
-            sleep(2000)
+            sleep(500)
             ikas1.startSerialMeasuring()
-            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
         while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
             sleep(100)
             if (statusIkas == 138f) {
-                setCause("Ошибка 138")
+                cause = "Ошибка 138"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
             measuringR6 = formatRealNumber(measuringR.toDouble())
             if (measuringR6 != BREAK_IKAS) {
-                tableValues[1].resistanceContactGroup6.value = measuringR6.toString()
+                tableValues[0].resistanceContactGroup6.value = measuringR6.toString()
             } else {
-                tableValues[1].resistanceContactGroup6.value = "Обрыв"
+                tableValues[0].resistanceContactGroup6.value = "-.--"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления седьмой контактной группы")
             rele2.off(12)
             rele2.off(13)
             rele2.on(9)
             rele2.on(10)
-            sleep(2000)
+            sleep(500)
             ikas1.startSerialMeasuring()
-            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
         while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
             sleep(100)
             if (statusIkas == 138f) {
-                setCause("Ошибка 138")
+                cause = "Ошибка 138"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
             measuringR7 = formatRealNumber(measuringR.toDouble())
             if (measuringR7 != BREAK_IKAS) {
-                tableValues[1].resistanceContactGroup7.value = measuringR7.toString()
+                tableValues[0].resistanceContactGroup7.value = measuringR7.toString()
             } else {
-                tableValues[1].resistanceContactGroup7.value = "Обрыв"
+                tableValues[0].resistanceContactGroup7.value = "-.--"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Измерение сопротивления восьмой контактной группы")
             rele2.off(9)
             rele2.off(10)
             rele2.on(6)
             rele2.on(7)
-            sleep(2000)
+            sleep(500)
             ikas1.startSerialMeasuring()
-            appendMessageToLog(LogTag.DEBUG, "Ожидаем, пока измерение закончится")
         }
 
         while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
             sleep(100)
             if (statusIkas == 138f) {
-                setCause("Ошибка 138")
+                cause = "Ошибка 138"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
             measuringR8 = formatRealNumber(measuringR.toDouble())
             if (measuringR8 != BREAK_IKAS) {
-                tableValues[1].resistanceContactGroup8.value = measuringR8.toString()
+                tableValues[0].resistanceContactGroup8.value = measuringR8.toString()
             } else {
-                tableValues[1].resistanceContactGroup8.value = "Обрыв"
+                tableValues[0].resistanceContactGroup8.value = "-.--"
             }
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
-            appendMessageToLog(LogTag.DEBUG, "Разбор схемы для нормально открытых контактов")
+            idcGV1.offVoltage()
+            offAllRele()
+        }
+    }
+
+    private fun rel2() {
+        if (isExperimentRunning && isDevicesResponding()) {
+            idcGV1.remoteControl()
+            idcGV1.offVoltage()
+            idcGV1.setVoltage(testItemVoltageNom)
+            idcGV1.setMaxCurrent(1.0)
+            idcGV1.onVoltage()
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele1.on(1)
+            rele1.on(4)
+            rele3.on(9)
+            rele1.on(18)
+            rele1.on(19)
+            rele1.on(20)
+            rele1.on(25)
+            rele1.on(26)
+            rele1.on(32)
+            rele1.on(31)
+            rele3.on(1)
+            rele3.on(2)
+            rele3.on(3)
+            rele3.on(4)
+            rele3.on(11)
+            rele3.on(10)
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            tableValues[0].resistanceContactGroup1.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            tableValues[0].resistanceContactGroup2.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.on(27)
+            rele2.on(28)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR3 = formatRealNumber(measuringR.toDouble())
+            if (measuringR3 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup3.value = measuringR3.toString()
+            } else {
+                tableValues[0].resistanceContactGroup3.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(27)
+            rele2.off(28)
+            rele2.on(30)
+            rele2.on(31)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR4 = formatRealNumber(measuringR.toDouble())
+            if (measuringR4 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup4.value = measuringR4.toString()
+            } else {
+                tableValues[0].resistanceContactGroup4.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(30)
+            rele2.off(31)
+            rele2.on(15)
+            rele2.on(16)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR5 = formatRealNumber(measuringR.toDouble())
+            if (measuringR5 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup5.value = measuringR5.toString()
+            } else {
+                tableValues[0].resistanceContactGroup5.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(15)
+            rele2.off(16)
+            rele2.on(12)
+            rele2.on(13)
+            sleep(500)
+            ikas1.startSerialMeasuring()
+        }
+
+        while (isExperimentRunning && statusIkas != 0f && statusIkas != 101f && isDevicesResponding()) {
+            sleep(100)
+            if (statusIkas == 138f) {
+                cause = "Ошибка 138"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            sleep(500)
+            measuringR6 = formatRealNumber(measuringR.toDouble())
+            if (measuringR6 != BREAK_IKAS) {
+                tableValues[0].resistanceContactGroup6.value = measuringR6.toString()
+            } else {
+                tableValues[0].resistanceContactGroup6.value = "-.--"
+            }
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            rele2.off(12)
+            rele2.off(13)
+            tableValues[0].resistanceContactGroup7.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
+            tableValues[0].resistanceContactGroup8.value = "-.--"
+        }
+
+        if (isExperimentRunning && isDevicesResponding()) {
             idcGV1.offVoltage()
             offAllRele()
         }
     }
 
     private fun setResult() {
-        if (cause.isNotEmpty()) {
-            tableValues[1].result.value = "Неуспешно"
-            appendMessageToLog(LogTag.ERROR, "Причина: $cause")
-        } else {
-            appendMessageToLog(LogTag.MESSAGE, "Испытание завершено успешно")
-            tableValues[1].result.value = "Успешно"
+        when {
+            cause.isNotEmpty() -> {
+                tableValues[0].result.value = "Прервано"
+                appendMessageToLog(LogTag.ERROR, "Испытание прервано по причине: $cause")
+            }
+            !isDevicesResponding() -> {
+                controller.tableValuesTest1[0].result.value = "Прервано"
+                appendMessageToLog(LogTag.ERROR, "Испытание прервано по причине: потеряна связь с устройствами")
+            }
+            else -> {
+                appendMessageToLog(LogTag.MESSAGE, "Испытание завершено успешно")
+                tableValues[0].result.value = "Годен"
+            }
         }
     }
 }

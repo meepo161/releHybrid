@@ -11,7 +11,10 @@ import javafx.scene.shape.Circle
 import ru.avem.rele.controllers.MainViewController
 import ru.avem.rele.controllers.Test1Controller
 import ru.avem.rele.entities.TableValuesTest1
-import ru.avem.rele.utils.*
+import ru.avem.rele.utils.State
+import ru.avem.rele.utils.Toast
+import ru.avem.rele.utils.transitionLeft
+import ru.avem.rele.utils.transitionRight
 import tornadofx.*
 
 class Test1View : View("ИКАС катушки") {
@@ -28,7 +31,6 @@ class Test1View : View("ИКАС катушки") {
 
     var progressBarTime: ProgressBar by singleAssign()
 
-
     override fun onBeforeShow() {
     }
 
@@ -36,8 +38,10 @@ class Test1View : View("ИКАС катушки") {
         controller.setExperimentProgress(0)
         controller.clearTable()
         controller.clearLog()
-        controller.appendMessageToLog(LogTag.MESSAGE, "Нажмите <Старт> для начала испытания")
         circleComStatus.fill = State.BAD.c
+        if (mainController.auto) {
+            controller.startTest()
+        }
 //        controller.fillTableByEO(mainView.comboBoxTestItem as TestObjectsType, mainView.textFieldSerialNumber.toString())
     }
 
@@ -177,26 +181,28 @@ class Test1View : View("ИКАС катушки") {
         }.addClass(Styles.anchorPaneBorders)
     }.addClass(Styles.blueTheme)
 
-    private fun startNextExperiment() {
-        when {
-            mainController.maskTests and 2 > 0 -> {
-                replaceWith<Test2View>(transitionLeft)
-            }
-            mainController.maskTests and 4 > 0 -> {
-                replaceWith<Test3View>(transitionLeft)
-            }
-            mainController.maskTests and 8 > 0 -> {
-                replaceWith<Test4View>(transitionLeft)
-            }
-            mainController.maskTests and 16 > 0 -> {
-                replaceWith<Test5View>(transitionLeft)
-            }
-            mainController.maskTests and 32 > 0 -> {
-                replaceWith<Test6View>(transitionLeft)
-            }
-            else -> {
-                replaceWith<MainView>(transitionRight)
-                Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+    fun startNextExperiment() {
+        runLater {
+            when {
+                mainController.maskTests and 2 > 0 -> {
+                    replaceWith<Test2View>(transitionLeft)
+                }
+                mainController.maskTests and 4 > 0 -> {
+                    replaceWith<Test3View>(transitionLeft)
+                }
+                mainController.maskTests and 8 > 0 -> {
+                    replaceWith<Test4View>(transitionLeft)
+                }
+                mainController.maskTests and 16 > 0 -> {
+                    replaceWith<Test5View>(transitionLeft)
+                }
+                mainController.maskTests and 32 > 0 -> {
+                    replaceWith<Test6View>(transitionLeft)
+                }
+                else -> {
+                    replaceWith<MainView>(transitionRight)
+                    Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+                }
             }
         }
     }

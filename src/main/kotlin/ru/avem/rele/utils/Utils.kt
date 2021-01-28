@@ -4,12 +4,14 @@ import javafx.event.EventHandler
 import javafx.scene.control.PasswordField
 import javafx.scene.control.TextField
 import tornadofx.ViewTransition
+import tornadofx.millis
 import tornadofx.seconds
 import java.awt.Desktop
 import java.io.*
 import java.nio.file.Paths
 import java.util.*
 import kotlin.math.abs
+import kotlin.time.milliseconds
 
 fun formatRealNumber(num: Double): Double {
     val absNum = abs(num)
@@ -92,12 +94,12 @@ fun String?.toIntOrNullByFormatter() = when {
     else -> trim().toIntOrNull()
 }
 
-var transitionLeft = ViewTransition.Fade(1.seconds).apply {
+var transitionLeft = ViewTransition.Fade(300.millis).apply {
     setup {
         style = "-fx-background-color: #444"
     }
 }
-var transitionRight = ViewTransition.Fade(1.seconds).apply {
+var transitionRight = ViewTransition.Fade(300.millis).apply {
     setup {
         style = "-fx-background-color: #444"
     }

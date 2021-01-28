@@ -2,6 +2,7 @@ package ru.avem.rele.controllers
 
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleStringProperty
+import javafx.scene.control.ButtonType
 import org.jetbrains.exposed.sql.transactions.transaction
 import ru.avem.rele.database.entities.ObjectsTypes
 import ru.avem.rele.database.entities.TestObjectsType
@@ -16,8 +17,9 @@ class MainViewController : Controller() {
     val view: MainView by inject()
     var position1 = ""
     var maskTests = 0
+    var auto = false
 
-    var tableValuesTest1 = observableList(
+    var tableValuesTest1 = observableListOf(
         TableValuesTest1(
             SimpleStringProperty("Заданные"),
             SimpleStringProperty("0.0"),
@@ -32,20 +34,7 @@ class MainViewController : Controller() {
         )
     )
 
-    var tableValuesTest2 = observableList(
-        TableValuesTest2(
-            SimpleStringProperty("Заданные"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("")
-        ),
-
+    var tableValuesTest2 = observableListOf(
         TableValuesTest2(
             SimpleStringProperty("Измеренные"),
             SimpleStringProperty("0.0"),
@@ -59,20 +48,7 @@ class MainViewController : Controller() {
             SimpleStringProperty("")
         )
     )
-    var tableValuesTest3 = observableList(
-        TableValuesTest3(
-            SimpleStringProperty("Заданные"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("0.0"),
-            SimpleStringProperty("")
-        ),
-
+    var tableValuesTest3 = observableListOf(
         TableValuesTest3(
             SimpleStringProperty("Измеренные"),
             SimpleStringProperty("0.0"),
@@ -87,7 +63,7 @@ class MainViewController : Controller() {
         )
     )
 
-    var tableValuesTest4 = observableList(
+    var tableValuesTest4 = observableListOf(
         TableValuesTest4(
             SimpleStringProperty("Заданные"),
             SimpleDoubleProperty(0.0),
@@ -101,7 +77,7 @@ class MainViewController : Controller() {
         )
     )
 
-    var tableValuesTest5 = observableList(
+    var tableValuesTest5 = observableListOf(
         TableValuesTest5(
             SimpleStringProperty("Заданные"),
             SimpleDoubleProperty(0.0),
@@ -115,7 +91,7 @@ class MainViewController : Controller() {
         )
     )
 
-    var tableValuesTest6 = observableList(
+    var tableValuesTest6 = observableListOf(
         TableValuesTest6(
             SimpleStringProperty("Заданные"),
             SimpleDoubleProperty(0.0),
@@ -130,13 +106,12 @@ class MainViewController : Controller() {
     )
 
     fun handleStartTest() {
-
         Singleton.currentTestItem = transaction {
             TestObjectsType.find {
-                ObjectsTypes.id eq view.comboBoxTestItem.selectedItem!!.id
-            }.toList().observable()
+                ObjectsTypes.serialNumber eq view.comboBoxTestItem.selectedItem.toString()
+            }.toList().asObservable()
         }.first()
-
+        Singleton.currentTestItemType = view.comboBoxTypeItem.selectedItem.toString()
         maskTests = 0
         maskTests = maskTests or if (view.checkBoxTest1.isSelected) 1 else 0
         maskTests = maskTests or if (view.checkBoxTest2.isSelected) 2 else 0
@@ -149,11 +124,30 @@ class MainViewController : Controller() {
             Toast.makeText("Введите заводской номер и выберите объект испытания").show(Toast.ToastType.WARNING)
         } else if (!isAtLeastOneIsSelected()) {
             Toast.makeText("Выберите хотя бы одно испытание из списка").show(Toast.ToastType.WARNING)
+        } else if (!Singleton.currentTestItem.resistanceCoil1.replace(",", ".").isDouble() ||
+            !Singleton.currentTestItem.resistanceCoil2.replace(",", ".").isDouble() ||
+            !Singleton.currentTestItem.voltageOrCurrentNom.replace(",", ".").isDouble() ||
+            !Singleton.currentTestItem.voltageOrCurrentMin.replace(",", ".").isDouble() ||
+            !Singleton.currentTestItem.voltageOrCurrentMax.replace(",", ".").isDouble() ||
+            !Singleton.currentTestItem.voltageOrCurrentOverload.replace(",", ".").isDouble() ||
+            !Singleton.currentTestItem.timeOff.replace(",", ".").isDouble()
+        ) {
+            Toast.makeText("Проверьте правильнсть введенных данных в объекте испытания").show(Toast.ToastType.WARNING)
         } else {
-//                experimentsValuesModel.createNewProtocol(
-//                    textFieldSerialNumber.getText(),
-//                    comboBoxTestItem.getSelectionModel().getSelectedItem()
-//                )
+
+            auto = false
+
+            confirm(
+                "Автоматическое выполнение опытов",
+                "Провести опыты в автоматическом режиме?",
+                ButtonType.YES, ButtonType.NO,
+                owner = view.currentWindow,
+                title = ""
+            ) {
+                auto = true
+            }
+
+
             when {
                 maskTests and 1 > 0 -> {
                     view.start1Test()
@@ -187,14 +181,14 @@ class MainViewController : Controller() {
     }
 
     fun refreshObjectsTypes() {
-        val selectedIndex = view.comboBoxTestItem.selectionModel.selectedIndex
-        view.comboBoxTestItem.items = transaction {
-            TestObjectsType.all().toList().asObservable()
-        }
-        view.comboBoxTestItem.selectionModel.select(selectedIndex)
+//        val selectedIndex = view.comboBoxTestItem.selectionModel.selectedIndex
+//        view.comboBoxTestItem.items = transaction {
+//            TestObjectsType.all().toList().asObservable()
+//        }
+//        view.comboBoxTestItem.selectionModel.select(selectedIndex)
     }
 
     fun showAboutUs() {
-        Toast.makeText("Версия ПО: 1.0.0\nВерсия БСУ: 1.0.0\nДата: 30.04.2020").show(Toast.ToastType.INFORMATION)
+        Toast.makeText("Версия ПО: 1.0.0\nДата: 28.01.2021").show(Toast.ToastType.INFORMATION)
     }
 }

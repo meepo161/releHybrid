@@ -33,52 +33,63 @@ class Ikas8Controller(
     override val writingRegisters = mutableListOf<Pair<DeviceRegister, Number>>()
 
     override fun readRegister(register: DeviceRegister) {
-        transactionWithAttempts {
-            when (register.valueType) {
-                DeviceRegister.RegisterValueType.SHORT -> {
-                    val value = protocolAdapter.readHoldingRegisters(id, register.address, 1).first().toShort()
-                    register.value = value
-                }
-                DeviceRegister.RegisterValueType.FLOAT -> {
-                    val modbusRegister =
-                        protocolAdapter.readHoldingRegisters(id, register.address, 4).map(ModbusRegister::toShort)
-                    register.value = allocateOrderedByteBuffer(modbusRegister, TypeByteOrder.BIG_ENDIAN, 4).float
-                }
-                DeviceRegister.RegisterValueType.INT32 -> {
-                    val modbusRegister =
-                        protocolAdapter.readHoldingRegisters(id, register.address, 4).map(ModbusRegister::toShort)
-                    register.value = allocateOrderedByteBuffer(modbusRegister, TypeByteOrder.BIG_ENDIAN, 4).int
+        isResponding = try {
+            transactionWithAttempts {
+                when (register.valueType) {
+                    DeviceRegister.RegisterValueType.SHORT -> {
+                        val value = protocolAdapter.readHoldingRegisters(id, register.address, 1).first().toShort()
+                        register.value = value
+                    }
+                    DeviceRegister.RegisterValueType.FLOAT -> {
+                        val modbusRegister =
+                            protocolAdapter.readHoldingRegisters(id, register.address, 4).map(ModbusRegister::toShort)
+                        register.value = allocateOrderedByteBuffer(modbusRegister, TypeByteOrder.BIG_ENDIAN, 4).float
+                    }
+                    DeviceRegister.RegisterValueType.INT32 -> {
+                        val modbusRegister =
+                            protocolAdapter.readHoldingRegisters(id, register.address, 4).map(ModbusRegister::toShort)
+                        register.value = allocateOrderedByteBuffer(modbusRegister, TypeByteOrder.BIG_ENDIAN, 4).int
+                    }
                 }
             }
+            true
+        } catch (e: TransportException) {
+            false
         }
     }
 
     override fun <T : Number> writeRegister(register: DeviceRegister, value: T) {
-        when (value) {
-            is Float -> {
-                val bb = ByteBuffer.allocate(4).putFloat(value).order(ByteOrder.LITTLE_ENDIAN)
-                val registers = listOf(ModbusRegister(bb.getShort(2)), ModbusRegister(bb.getShort(0)))
-                transactionWithAttempts {
-                    protocolAdapter.presetMultipleRegisters(id, register.address, registers)
+        isResponding = try {
+            when (value) {
+                is Float -> {
+                    val bb = ByteBuffer.allocate(4).putFloat(value).order(ByteOrder.LITTLE_ENDIAN)
+                    val registers = listOf(ModbusRegister(bb.getShort(2)), ModbusRegister(bb.getShort(0)))
+                    transactionWithAttempts {
+                        protocolAdapter.presetMultipleRegisters(id, register.address, registers)
+                    }
+                }
+                is Int -> {
+                    val bb = ByteBuffer.allocate(4).putInt(value).order(ByteOrder.BIG_ENDIAN)
+                    val registers = listOf(ModbusRegister(bb.getShort(0)), ModbusRegister(bb.getShort(2)))
+                    transactionWithAttempts {
+                        protocolAdapter.presetMultipleRegisters(id, register.address, registers)
+                    }
+                }
+                is Short -> {
+                    transactionWithAttempts {
+                        protocolAdapter.presetSingleRegister(id, register.address, ModbusRegister(value))
+                    }
+                }
+                else -> {
+                    throw UnsupportedOperationException("Method can handle only with Float, Int and Short")
                 }
             }
-            is Int -> {
-                val bb = ByteBuffer.allocate(4).putInt(value).order(ByteOrder.BIG_ENDIAN)
-                val registers = listOf(ModbusRegister(bb.getShort(0)), ModbusRegister(bb.getShort(2)))
-                transactionWithAttempts {
-                    protocolAdapter.presetMultipleRegisters(id, register.address, registers)
-                }
-            }
-            is Short -> {
-                transactionWithAttempts {
-                    protocolAdapter.presetSingleRegister(id, register.address, ModbusRegister(value))
-                }
-            }
-            else -> {
-                throw UnsupportedOperationException("Method can handle only with Float, Int and Short")
-            }
+            true
+        } catch (e: TransportException) {
+            false
         }
     }
+
 
     override fun readAllRegisters() {
         model.registers.values.forEach {

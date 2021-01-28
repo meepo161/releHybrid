@@ -22,7 +22,7 @@ class ObjectTypeEditorWindow : View("Редактор объектов") {
     private val mainController: MainViewController by inject()
 
     override val root = anchorpane {
-        prefWidth = 1600.0
+        prefWidth = 1920.0
         prefHeight = 1000.0
         hbox(spacing = 16.0) {
             anchorpaneConstraints {
@@ -52,52 +52,91 @@ class ObjectTypeEditorWindow : View("Редактор объектов") {
                     addClass(Styles.medium)
                 }.makeEditable()
 
-                column("Сопротивление катушек", TestObjectsType::resistanceCoil) {
+                column("Сопротивление 1 катушки", TestObjectsType::resistanceCoil1) {
                     onEditCommit = EventHandler { cell ->
                         transaction {
                             ObjectsTypes.update({
-                                ObjectsTypes.resistanceCoil eq selectedItem!!.resistanceCoil
+                                ObjectsTypes.resistanceCoil1 eq selectedItem!!.resistanceCoil1
                             }) {
-                                it[resistanceCoil] = cell.newValue
+                                it[resistanceCoil1] = cell.newValue
                             }
                         }
                         mainController.refreshObjectsTypes()
                     }
                     addClass(Styles.medium)
                 }.makeEditable()
-                column("Сопротивление контактных групп", TestObjectsType::resistanceContactGroup) {
+                column("Сопротивление 2 катушки", TestObjectsType::resistanceCoil2) {
                     onEditCommit = EventHandler { cell ->
                         transaction {
                             ObjectsTypes.update({
-                                ObjectsTypes.resistanceContactGroup eq selectedItem!!.resistanceContactGroup
+                                ObjectsTypes.resistanceCoil2 eq selectedItem!!.resistanceCoil2
                             }) {
-                                it[resistanceContactGroup] = cell.newValue
+                                it[resistanceCoil2] = cell.newValue
                             }
                         }
                         mainController.refreshObjectsTypes()
                     }
                     addClass(Styles.medium)
                 }.makeEditable()
-                column("Мин напряжение", TestObjectsType::voltageMin) {
+                column("Управление", TestObjectsType::voltageOrCurrent) {
                     onEditCommit = EventHandler { cell ->
                         transaction {
                             ObjectsTypes.update({
-                                ObjectsTypes.voltageMin eq selectedItem!!.voltageMin
+                                ObjectsTypes.voltageOrCurrent eq selectedItem!!.voltageOrCurrent
                             }) {
-                                it[voltageMin] = cell.newValue
+                                it[voltageOrCurrent] = cell.newValue
                             }
                         }
                         mainController.refreshObjectsTypes()
                     }
                     addClass(Styles.medium)
                 }.makeEditable()
-                column("Макс напряжение", TestObjectsType::voltageMax) {
+                column("Ном напряжение", TestObjectsType::voltageOrCurrentNom) {
                     onEditCommit = EventHandler { cell ->
                         transaction {
                             ObjectsTypes.update({
-                                ObjectsTypes.voltageMax eq selectedItem!!.voltageMax
+                                ObjectsTypes.voltageOrCurrentNom eq selectedItem!!.voltageOrCurrentNom
                             }) {
-                                it[voltageMax] = cell.newValue
+                                it[voltageOrCurrentNom] = cell.newValue
+                            }
+                        }
+                        mainController.refreshObjectsTypes()
+                    }
+                    addClass(Styles.medium)
+                }.makeEditable()
+                column("Мин напряжение", TestObjectsType::voltageOrCurrentMin) {
+                    onEditCommit = EventHandler { cell ->
+                        transaction {
+                            ObjectsTypes.update({
+                                ObjectsTypes.voltageOrCurrentMin eq selectedItem!!.voltageOrCurrentMin
+                            }) {
+                                it[voltageOrCurrentMin] = cell.newValue
+                            }
+                        }
+                        mainController.refreshObjectsTypes()
+                    }
+                    addClass(Styles.medium)
+                }.makeEditable()
+                column("Макс напряжение", TestObjectsType::voltageOrCurrentMax) {
+                    onEditCommit = EventHandler { cell ->
+                        transaction {
+                            ObjectsTypes.update({
+                                ObjectsTypes.voltageOrCurrentMax eq selectedItem!!.voltageOrCurrentMax
+                            }) {
+                                it[voltageOrCurrentMax] = cell.newValue
+                            }
+                        }
+                        mainController.refreshObjectsTypes()
+                    }
+                    addClass(Styles.medium)
+                }.makeEditable()
+                column("Перегрузка", TestObjectsType::voltageOrCurrentOverload) {
+                    onEditCommit = EventHandler { cell ->
+                        transaction {
+                            ObjectsTypes.update({
+                                ObjectsTypes.voltageOrCurrentOverload eq selectedItem!!.voltageOrCurrentOverload
+                            }) {
+                                it[voltageOrCurrentOverload] = cell.newValue
                             }
                         }
                         mainController.refreshObjectsTypes()

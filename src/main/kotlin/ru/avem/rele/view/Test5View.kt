@@ -10,14 +10,19 @@ import javafx.scene.layout.VBox
 import javafx.scene.shape.Circle
 import ru.avem.rele.controllers.MainViewController
 import ru.avem.rele.controllers.Test5Controller
+import ru.avem.rele.entities.TableValuesTest4
 import ru.avem.rele.entities.TableValuesTest5
-import ru.avem.rele.utils.*
+import ru.avem.rele.utils.State
+import ru.avem.rele.utils.Toast
+import ru.avem.rele.utils.transitionLeft
+import ru.avem.rele.utils.transitionRight
 import tornadofx.*
 
 class Test5View : View("Тест5") {
     private val controller: Test5Controller by inject()
     private val mainController: MainViewController by inject()
 
+    var tableView5Test: TableView<TableValuesTest5> by singleAssign()
 
     var vBoxLog: VBox by singleAssign()
     var circleComStatus: Circle by singleAssign()
@@ -36,8 +41,10 @@ class Test5View : View("Тест5") {
         controller.setExperimentProgress(0)
         controller.clearTable()
         controller.clearLog()
-        controller.appendMessageToLog(LogTag.MESSAGE, "Нажмите <Старт> для начала испытания")
         circleComStatus.fill = State.BAD.c
+        if (mainController.auto) {
+            controller.startTest()
+        }
 //        controller.fillTableByEO(mainView.comboBoxTestItem as TestObjectsType, mainView.textFieldSerialNumber.toString())
     }
 
@@ -51,12 +58,12 @@ class Test5View : View("Тест5") {
             }
             alignment = Pos.CENTER
 
-            label("Опыт определения максимального напряжения отпускания реле") {
+            label("Определение максимального напряжения(тока) отпускания реле") {
 
                 alignmentProperty().set(Pos.CENTER)
             }.addClass(Styles.megaHard)
 
-            tableview(controller.tableValues) {
+            tableView5Test = tableview(controller.tableValues) {
 
                 minHeight = 146.0
                 maxHeight = 146.0
@@ -83,7 +90,11 @@ class Test5View : View("Тест5") {
 
                 buttonStartStopTest = button("Старт") {
                     action {
-                        controller.startTest()
+                        if (controller.isExperimentEnded) {
+                            controller.startTest()
+                        } else {
+                            controller.cause = "Отменено оператором"
+                        }
                     }
                 }.addClass(Styles.megaHard)
 
@@ -173,14 +184,16 @@ class Test5View : View("Тест5") {
         }.addClass(Styles.anchorPaneBorders)
     }.addClass(Styles.blueTheme)
 
-    private fun startNextExperiment() {
-        when {
-            mainController.maskTests and 32 > 0 -> {
-                replaceWith<Test6View>(transitionLeft)
-            }
-            else -> {
-                replaceWith<MainView>(transitionRight)
-                Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+    fun startNextExperiment() {
+        runLater {
+            when {
+                mainController.maskTests and 32 > 0 -> {
+                    replaceWith<Test6View>(transitionLeft)
+                }
+                else -> {
+                    replaceWith<MainView>(transitionRight)
+                    Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+                }
             }
         }
     }

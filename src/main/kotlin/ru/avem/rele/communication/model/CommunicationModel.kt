@@ -4,7 +4,6 @@ import ru.avem.kserialpooler.communication.Connection
 import ru.avem.kserialpooler.communication.adapters.modbusrtu.ModbusRTUAdapter
 import ru.avem.kserialpooler.communication.utils.SerialParameters
 import ru.avem.rele.app.Rele.Companion.isAppRunning
-import ru.avem.rele.communication.adapters.stringascii.StringASCIIAdapter
 import ru.avem.rele.communication.model.devices.avem.avem4.Avem4Controller
 import ru.avem.rele.communication.model.devices.avem.ikas.Ikas8Controller
 import ru.avem.rele.communication.model.devices.idc.IDCController
@@ -49,7 +48,6 @@ object CommunicationModel {
 
     private val modbusAdapter = ModbusRTUAdapter(connection)
     private val modbusAdapterForAvem = ModbusRTUAdapter(connectionForAvem)
-    private val asciiAdapter = StringASCIIAdapter(connection)
 
     private val deviceControllers: Map<DeviceID, IDeviceController> = mapOf(
         DeviceID.IKAS1 to Ikas8Controller(DeviceID.IKAS1.toString(), modbusAdapter, 4),

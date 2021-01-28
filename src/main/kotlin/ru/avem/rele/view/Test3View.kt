@@ -11,12 +11,16 @@ import javafx.scene.shape.Circle
 import ru.avem.rele.controllers.MainViewController
 import ru.avem.rele.controllers.Test3Controller
 import ru.avem.rele.entities.TableValuesTest3
-import ru.avem.rele.utils.*
+import ru.avem.rele.utils.State
+import ru.avem.rele.utils.Toast
+import ru.avem.rele.utils.transitionLeft
+import ru.avem.rele.utils.transitionRight
 import tornadofx.*
 
 class Test3View : View("Тест3") {
     private val controller: Test3Controller by inject()
     private val mainController: MainViewController by inject()
+    private val prevTest: Test2View by inject()
 
 
     var vBoxLog: VBox by singleAssign()
@@ -35,8 +39,10 @@ class Test3View : View("Тест3") {
         controller.setExperimentProgress(0)
         controller.clearTable()
         controller.clearLog()
-        controller.appendMessageToLog(LogTag.MESSAGE, "Нажмите <Старт> для начала испытания")
         circleComStatus.fill = State.BAD.c
+        if (mainController.auto) {
+            controller.startTest()
+        }
 //        controller.fillTableByEO(mainView.comboBoxTestItem as TestObjectsType, mainView.textFieldSerialNumber.toString())
     }
 
@@ -50,15 +56,15 @@ class Test3View : View("Тест3") {
             }
             alignment = Pos.CENTER
 
-            label("Измерение сопротивления переходных контактов NC") {
+            label("Измерение контактно-переходного сопротивления НЗ контактов") {
 
                 alignmentProperty().set(Pos.CENTER)
             }.addClass(Styles.megaHard)
 
             tableview(controller.tableValues) {
 
-                minHeight = 146.0
-                maxHeight = 146.0
+                minHeight = 96.0
+                maxHeight = 96.0
 
                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                 mouseTransparentProperty().set(true)
@@ -183,20 +189,22 @@ class Test3View : View("Тест3") {
         }.addClass(Styles.anchorPaneBorders)
     }.addClass(Styles.blueTheme)
 
-    private fun startNextExperiment() {
-        when {
-            mainController.maskTests and 8 > 0 -> {
-                replaceWith<Test4View>(transitionLeft)
-            }
-            mainController.maskTests and 16 > 0 -> {
-                replaceWith<Test5View>(transitionLeft)
-            }
-            mainController.maskTests and 32 > 0 -> {
-                replaceWith<Test6View>(transitionLeft)
-            }
-            else -> {
-                replaceWith<MainView>(transitionRight)
-                Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+    fun startNextExperiment() {
+        runLater {
+            when {
+                mainController.maskTests and 8 > 0 -> {
+                    replaceWith<Test4View>(transitionLeft)
+                }
+                mainController.maskTests and 16 > 0 -> {
+                    replaceWith<Test5View>(transitionLeft)
+                }
+                mainController.maskTests and 32 > 0 -> {
+                    replaceWith<Test6View>(transitionLeft)
+                }
+                else -> {
+                    replaceWith<MainView>(transitionRight)
+                    Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+                }
             }
         }
     }

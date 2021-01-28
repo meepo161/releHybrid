@@ -23,7 +23,9 @@ import tornadofx.*
 class Test6View : View("Тест6") {
     private val controller: Test6Controller by inject()
     private val mainController: MainViewController by inject()
+    private val mainView: MainView by inject()
 
+    var tableView6Test: TableView<TableValuesTest6> by singleAssign()
 
     var vBoxLog: VBox by singleAssign()
     var circleComStatus: Circle by singleAssign()
@@ -34,7 +36,7 @@ class Test6View : View("Тест6") {
 
     var progressBarTime: ProgressBar by singleAssign()
 
-    private var lineChart: LineChart<Number, Number> by singleAssign()
+//    private var lineChart: LineChart<Number, Number> by singleAssign()
     var series = XYChart.Series<Number, Number>()
 
 
@@ -47,6 +49,9 @@ class Test6View : View("Тест6") {
         controller.clearLog()
         controller.appendMessageToLog(LogTag.MESSAGE, "Нажмите <Старт> для начала испытания")
         circleComStatus.fill = State.BAD.c
+        if (mainController.auto) {
+            controller.startTest()
+        }
 //        controller.fillTableByEO(mainView.comboBoxTestItem as TestObjectsType, mainView.textFieldSerialNumber.toString())
     }
 
@@ -60,12 +65,12 @@ class Test6View : View("Тест6") {
             }
             alignment = Pos.CENTER
 
-            label("Опыт определения времени отпускания реле") {
+            label("Определение времени отпускания реле") {
 
                 alignmentProperty().set(Pos.CENTER)
             }.addClass(Styles.megaHard)
 
-            tableview(controller.tableValues) {
+            tableView6Test = tableview(controller.tableValues) {
 
                 minHeight = 146.0
                 maxHeight = 146.0
@@ -78,14 +83,14 @@ class Test6View : View("Тест6") {
                 column("Результат", TableValuesTest6::result.getter)
             }
 
-            lineChart = linechart("", NumberAxis(), NumberAxis()) {
-                xAxis.label = "xAxis"
-                minHeight = 300.0
-                data.add(series)
-                animated = false
-                createSymbols = false
-                isLegendVisible = false
-            }.addClass(Styles.lineChart)
+//            lineChart = linechart("", NumberAxis(), NumberAxis()) {
+//                xAxis.label = "xAxis"
+//                minHeight = 300.0
+//                data.add(series)
+//                animated = false
+//                createSymbols = false
+//                isLegendVisible = false
+//            }.addClass(Styles.lineChart)
 
             hbox(spacing = 48.0) {
 
@@ -101,7 +106,11 @@ class Test6View : View("Тест6") {
 
                 buttonStartStopTest = button("Старт") {
                     action {
-                        controller.startTest()
+                        if (controller.isExperimentEnded) {
+                            controller.startTest()
+                        } else {
+                            controller.cause = "Отменено оператором"
+                        }
                     }
                 }.addClass(Styles.megaHard)
 
@@ -187,8 +196,10 @@ class Test6View : View("Тест6") {
         }.addClass(Styles.anchorPaneBorders)
     }.addClass(Styles.blueTheme)
 
-    private fun startNextExperiment() {
-        replaceWith<MainView>(transitionRight)
-        Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+    fun startNextExperiment() {
+        runLater {
+            replaceWith<MainView>(transitionRight)
+            Toast.makeText("Выбранные испытания завершены").show(Toast.ToastType.INFORMATION)
+        }
     }
 }
