@@ -161,12 +161,14 @@ class Test1Controller : TestController() {
 
             appendMessageToLog(LogTag.DEBUG, "Инициализация устройств")
 
-            if (checkDevices().isNotEmpty()) {
-                setCause("Не отвечают : ${checkDevices()}")
-            }
-            while (!isDevicesResponding() && isExperimentRunning) {
-                checkDevices()
+            checkDevices()
+            var timeToStart = 300
+            while (isExperimentRunning && !isDevicesResponding() && timeToStart-- > 0) {
                 sleep(100)
+            }
+
+            if (!isDevicesResponding()) {
+                cause = "Приборы не отвечают"
             }
 
             appendMessageToLog(LogTag.DEBUG, "Подготовка стенда")
@@ -215,7 +217,7 @@ class Test1Controller : TestController() {
             controller.tableValuesTest1[0].resistanceCoil2.value = tableValues[0].resistanceCoil2.value
             controller.tableValuesTest1[1].resistanceCoil1.value = tableValues[1].resistanceCoil1.value
             controller.tableValuesTest1[1].resistanceCoil2.value = tableValues[1].resistanceCoil2.value
-            controller.tableValuesTest1[1].result.value = tableValues[1].result.value
+            controller.tableValuesTest1[1].result.value =          tableValues[1].result.value
 
             Platform.runLater {
                 view.buttonBack.isDisable = false
@@ -840,37 +842,37 @@ class Test1Controller : TestController() {
                 appendMessageToLog(LogTag.MESSAGE, "Результат: Успешно")
             }
             (measuringR1 < testItemR1 * 0.8 || measuringR1 > testItemR1 * 1.2) && (measuringR2 < testItemR2 * 0.8 || measuringR2 > testItemR2 * 1.2) -> {
-                tableValues[1].result.value = "Неуспешно"
+                tableValues[1].result.value = "Не годен"
                 appendMessageToLog(
                     LogTag.ERROR, "Результат: Сопротивления катушек отличаются более, чем на 20%"
                 )
             }
             measuringR1 < testItemR1 * 0.8 || measuringR1 > testItemR1 * 1.2 -> {
-                tableValues[1].result.value = "Неуспешно"
+                tableValues[1].result.value = "Не годен"
                 appendMessageToLog(
                     LogTag.ERROR, "Результат: Сопротивление первой катушки отличается более, чем на 20%"
                 )
             }
             measuringR2 < testItemR2 * 0.8 || measuringR2 > testItemR2 * 1.2 -> {
-                tableValues[1].result.value = "Неуспешно"
+                tableValues[1].result.value = "Не годен"
                 appendMessageToLog(
                     LogTag.ERROR, "Результат: Сопротивление второй катушки отличается более, чем на 20%"
                 )
             }
             measuringR1 == BREAK_IKAS && measuringR2 == BREAK_IKAS -> {
-                tableValues[1].result.value = "Неуспешно"
+                tableValues[1].result.value = "Не годен"
                 appendMessageToLog(
                     LogTag.ERROR, "Результат: Обрыв катушек"
                 )
             }
             measuringR1 == BREAK_IKAS -> {
-                tableValues[1].result.value = "Неуспешно"
+                tableValues[1].result.value = "Не годен"
                 appendMessageToLog(
                     LogTag.ERROR, "Результат: Обрыв первой катушки"
                 )
             }
             measuringR2 == BREAK_IKAS -> {
-                tableValues[1].result.value = "Неуспешно"
+                tableValues[1].result.value = "Не годен"
                 appendMessageToLog(
                     LogTag.ERROR, "Результат: Обрыв второй катушки"
                 )
@@ -892,12 +894,12 @@ class Test1Controller : TestController() {
             tableValues[1].result.value = "Годен"
             appendMessageToLog(LogTag.MESSAGE, "Результат: Успешно")
         } else if (measuringR1 < testItemR1 * 0.8 || measuringR1 > testItemR1 * 1.2) {
-            tableValues[1].result.value = "Неуспешно"
+            tableValues[1].result.value = "Не годен"
             appendMessageToLog(
                 LogTag.ERROR, "Результат: Сопротивление первой катушки отличается более, чем на 20%"
             )
         } else if (measuringR1 == BREAK_IKAS) {
-            tableValues[1].result.value = "Неуспешно"
+            tableValues[1].result.value = "Не годен"
             appendMessageToLog(
                 LogTag.ERROR, "Результат: Обрыв первой катушки"
             )

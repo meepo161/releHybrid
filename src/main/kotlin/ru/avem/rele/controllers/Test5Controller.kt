@@ -149,13 +149,16 @@ class Test5Controller : TestController() {
             isExperimentEnded = false
 
             appendMessageToLog(LogTag.DEBUG, "Инициализация устройств")
-            if (CommunicationModel.checkDevices().isNotEmpty()) {
-                cause = "Не отвечают : ${CommunicationModel.checkDevices()}"
-            }
-            while (!isDevicesResponding() && isExperimentRunning) {
-                CommunicationModel.checkDevices()
+            CommunicationModel.checkDevices()
+            var timeToStart = 300
+            while (isExperimentRunning && !isDevicesResponding() && timeToStart-- > 0) {
                 sleep(100)
             }
+
+            if (!isDevicesResponding()) {
+                cause = "Приборы не отвечают"
+            }
+            view.progressBarTime.progress = 0.2
             appendMessageToLog(LogTag.DEBUG, "Подготовка стенда")
             appendMessageToLog(LogTag.DEBUG, "Ожидание...")
 
@@ -217,6 +220,7 @@ class Test5Controller : TestController() {
             appendMessageToLog(LogTag.DEBUG, "Испытание завершено")
             setResult()
 
+            view.progressBarTime.progress = 1.0
             idcGV1.offVoltage()
             offAllRele()
 //            CommunicationModel.clearPollingRegisters()
@@ -472,13 +476,10 @@ class Test5Controller : TestController() {
             rele3.on(10)
         }
 
-
         if (isExperimentRunning && isDevicesResponding()) {
             idcGV1.onVoltage()
             sleep(6000)
         }
-
-
 
         while (avem4.getRMSVoltage() > 3.0 && isExperimentRunning && isDevicesResponding()) {
             maxU -= testItemVoltagetOverload / 100
@@ -925,8 +926,8 @@ class Test5Controller : TestController() {
                 appendMessageToLog(LogTag.ERROR, "Испытание прервано по причине: потеряна связь с устройствами")
             }
             tableValues[1].voltage.value * 0.8 > tableValues[0].voltage.value -> {
-                appendMessageToLog(LogTag.ERROR, "Напряжение или ток отпускания больше заданного на 20%")
-                tableValues[1].result.value = "Не успешно"
+                appendMessageToLog(LogTag.ERROR, "Напряжение или ток отпускания больше заданного")
+                tableValues[1].result.value = "Не годен"
             }
             else -> {
                 appendMessageToLog(LogTag.MESSAGE, "Испытание завершено успешно")

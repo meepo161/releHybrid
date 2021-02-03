@@ -314,7 +314,7 @@ class MainView : View("Комплексный стенд проверки рел
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
-                                column("", TableValuesTest1::descriptor.getter)
+                                column("R катушек", TableValuesTest1::descriptor.getter)
                                 column("R1, Ом", TableValuesTest1::resistanceCoil1.getter)
                                 column("R2, Ом", TableValuesTest1::resistanceCoil2.getter)
                                 column("Результат", TableValuesTest1::result.getter)
@@ -325,7 +325,7 @@ class MainView : View("Комплексный стенд проверки рел
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
-                                column("", TableValuesTest2::descriptor.getter)
+                                column("R НО", TableValuesTest2::descriptor.getter)
                                 column("R1, Ом", TableValuesTest2::resistanceContactGroup1.getter)
                                 column("R2, Ом", TableValuesTest2::resistanceContactGroup2.getter)
                                 column("R3, Ом", TableValuesTest2::resistanceContactGroup3.getter)
@@ -342,7 +342,7 @@ class MainView : View("Комплексный стенд проверки рел
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
-                                column("", TableValuesTest3::descriptor.getter)
+                                column("R НЗ", TableValuesTest3::descriptor.getter)
                                 column("R1, Ом", TableValuesTest3::resistanceContactGroupNC1.getter)
                                 column("R2, Ом", TableValuesTest3::resistanceContactGroupNC2.getter)
                                 column("R3, Ом", TableValuesTest3::resistanceContactGroupNC3.getter)
@@ -359,8 +359,8 @@ class MainView : View("Комплексный стенд проверки рел
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
-                                column("", TableValuesTest4::descriptor.getter)
-                                column("", TableValuesTest4::voltage.getter)
+                                column("Срабатывание", TableValuesTest4::descriptor.getter)
+                                column("U, В", TableValuesTest4::voltage.getter)
                                 column("Результат", TableValuesTest4::result.getter)
                             }
                             tableView5Result = tableview(controller.tableValuesTest5) {
@@ -369,8 +369,8 @@ class MainView : View("Комплексный стенд проверки рел
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
-                                column("", TableValuesTest5::descriptor.getter)
-                                column("", TableValuesTest5::voltage.getter)
+                                column("Отпускание", TableValuesTest5::descriptor.getter)
+                                column("U, В", TableValuesTest5::voltage.getter)
                                 column("Результат", TableValuesTest5::result.getter)
                             }
                             tableView6Result = tableview(controller.tableValuesTest6) {
@@ -379,7 +379,7 @@ class MainView : View("Комплексный стенд проверки рел
                                 columnResizePolicy = TableView.CONSTRAINED_RESIZE_POLICY
                                 mouseTransparentProperty().set(true)
 
-                                column("", TableValuesTest6::descriptor.getter)
+                                column("Размыкание", TableValuesTest6::descriptor.getter)
                                 column("t, с", TableValuesTest6::time.getter)
                                 column("Результат", TableValuesTest6::result.getter)
                             }

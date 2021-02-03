@@ -106,69 +106,113 @@ class MainViewController : Controller() {
     )
 
     fun handleStartTest() {
-        Singleton.currentTestItem = transaction {
-            TestObjectsType.find {
-                ObjectsTypes.serialNumber eq view.comboBoxTestItem.selectedItem.toString()
-            }.toList().asObservable()
-        }.first()
-        Singleton.currentTestItemType = view.comboBoxTypeItem.selectedItem.toString()
-        maskTests = 0
-        maskTests = maskTests or if (view.checkBoxTest1.isSelected) 1 else 0
-        maskTests = maskTests or if (view.checkBoxTest2.isSelected) 2 else 0
-        maskTests = maskTests or if (view.checkBoxTest3.isSelected) 4 else 0
-        maskTests = maskTests or if (view.checkBoxTest4.isSelected) 8 else 0
-        maskTests = maskTests or if (view.checkBoxTest5.isSelected) 16 else 0
-        maskTests = maskTests or if (view.checkBoxTest6.isSelected) 32 else 0
-
-        if (view.textFieldSerialNumber.text.isEmpty() || view.comboBoxTestItem.selectionModel.isEmpty) {
+        if (view.textFieldSerialNumber.text.isEmpty() || view.comboBoxTestItem.selectionModel.isEmpty || view.comboBoxTypeItem.selectionModel.isEmpty) {
             Toast.makeText("Введите заводской номер и выберите объект испытания").show(Toast.ToastType.WARNING)
-        } else if (!isAtLeastOneIsSelected()) {
-            Toast.makeText("Выберите хотя бы одно испытание из списка").show(Toast.ToastType.WARNING)
-        } else if (!Singleton.currentTestItem.resistanceCoil1.replace(",", ".").isDouble() ||
-            !Singleton.currentTestItem.resistanceCoil2.replace(",", ".").isDouble() ||
-            !Singleton.currentTestItem.voltageOrCurrentNom.replace(",", ".").isDouble() ||
-            !Singleton.currentTestItem.voltageOrCurrentMin.replace(",", ".").isDouble() ||
-            !Singleton.currentTestItem.voltageOrCurrentMax.replace(",", ".").isDouble() ||
-            !Singleton.currentTestItem.voltageOrCurrentOverload.replace(",", ".").isDouble() ||
-            !Singleton.currentTestItem.timeOff.replace(",", ".").isDouble()
-        ) {
-            Toast.makeText("Проверьте правильнсть введенных данных в объекте испытания").show(Toast.ToastType.WARNING)
         } else {
+            Singleton.currentTestItem = transaction {
+                TestObjectsType.find {
+                    ObjectsTypes.serialNumber eq view.comboBoxTestItem.selectedItem.toString()
+                }.toList().asObservable()
+            }.first()
+            Singleton.currentTestItemType = view.comboBoxTypeItem.selectedItem.toString()
 
-            auto = false
-
-            confirm(
-                "Автоматическое выполнение опытов",
-                "Провести опыты в автоматическом режиме?",
-                ButtonType.YES, ButtonType.NO,
-                owner = view.currentWindow,
-                title = ""
+            if (!isAtLeastOneIsSelected()) {
+                Toast.makeText("Выберите хотя бы одно испытание из списка").show(Toast.ToastType.WARNING)
+            } else if (!Singleton.currentTestItem.resistanceCoil1.replace(",", ".").isDouble() ||
+                !Singleton.currentTestItem.resistanceCoil2.replace(",", ".").isDouble() ||
+                !Singleton.currentTestItem.voltageOrCurrentNom.replace(",", ".").isDouble() ||
+                !Singleton.currentTestItem.voltageOrCurrentMin.replace(",", ".").isDouble() ||
+                !Singleton.currentTestItem.voltageOrCurrentMax.replace(",", ".").isDouble() ||
+                !Singleton.currentTestItem.voltageOrCurrentOverload.replace(",", ".").isDouble() ||
+                !Singleton.currentTestItem.timeOff.replace(",", ".").isDouble()
             ) {
-                auto = true
-            }
+                Toast.makeText("Проверьте правильнсть введенных данных в объекте испытания")
+                    .show(Toast.ToastType.WARNING)
+            } else {
+                maskTests = 0
+                maskTests = maskTests or if (view.checkBoxTest1.isSelected) 1 else 0
+                maskTests = maskTests or if (view.checkBoxTest2.isSelected) 2 else 0
+                maskTests = maskTests or if (view.checkBoxTest3.isSelected) 4 else 0
+                maskTests = maskTests or if (view.checkBoxTest4.isSelected) 8 else 0
+                maskTests = maskTests or if (view.checkBoxTest5.isSelected) 16 else 0
+                maskTests = maskTests or if (view.checkBoxTest6.isSelected) 32 else 0
+
+                clearTableResults()
+                auto = false
+
+                confirm(
+                    "Автоматическое выполнение опытов",
+                    "Провести опыты в автоматическом режиме?",
+                    ButtonType.YES, ButtonType.NO,
+                    owner = view.currentWindow,
+                    title = ""
+                ) {
+                    auto = true
+                }
 
 
-            when {
-                maskTests and 1 > 0 -> {
-                    view.start1Test()
-                }
-                maskTests and 2 > 0 -> {
-                    view.start2Test()
-                }
-                maskTests and 4 > 0 -> {
-                    view.start3Test()
-                }
-                maskTests and 8 > 0 -> {
-                    view.start4Test()
-                }
-                maskTests and 16 > 0 -> {
-                    view.start5Test()
-                }
-                maskTests and 32 > 0 -> {
-                    view.start6Test()
+                when {
+                    maskTests and 1 > 0 -> {
+                        view.start1Test()
+                    }
+                    maskTests and 2 > 0 -> {
+                        view.start2Test()
+                    }
+                    maskTests and 4 > 0 -> {
+                        view.start3Test()
+                    }
+                    maskTests and 8 > 0 -> {
+                        view.start4Test()
+                    }
+                    maskTests and 16 > 0 -> {
+                        view.start5Test()
+                    }
+                    maskTests and 32 > 0 -> {
+                        view.start6Test()
+                    }
                 }
             }
         }
+    }
+
+    private fun clearTableResults() {
+        tableValuesTest1[0].resistanceCoil1.value = ""
+        tableValuesTest1[0].resistanceCoil2.value = ""
+        tableValuesTest1[1].resistanceCoil1.value = ""
+        tableValuesTest1[1].resistanceCoil2.value = ""
+        tableValuesTest1[1].result.value = ""
+
+        tableValuesTest2[0].resistanceContactGroup1.value = ""
+        tableValuesTest2[0].resistanceContactGroup2.value = ""
+        tableValuesTest2[0].resistanceContactGroup3.value = ""
+        tableValuesTest2[0].resistanceContactGroup4.value = ""
+        tableValuesTest2[0].resistanceContactGroup5.value = ""
+        tableValuesTest2[0].resistanceContactGroup6.value = ""
+        tableValuesTest2[0].resistanceContactGroup7.value = ""
+        tableValuesTest2[0].resistanceContactGroup8.value = ""
+        tableValuesTest2[0].result.value = ""
+
+        tableValuesTest3[0].resistanceContactGroupNC1.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC2.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC3.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC4.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC5.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC6.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC7.value = ""
+        tableValuesTest3[0].resistanceContactGroupNC8.value = ""
+        tableValuesTest3[0].result.value = ""
+
+        tableValuesTest4[0].voltage.value = 0.0
+        tableValuesTest4[1].voltage.value = 0.0
+        tableValuesTest4[1].result.value = ""
+
+        tableValuesTest5[0].voltage.value = 0.0
+        tableValuesTest5[1].voltage.value = 0.0
+        tableValuesTest5[1].result.value = ""
+
+        tableValuesTest6[0].time.value = 0.0
+        tableValuesTest6[1].time.value = 0.0
+        tableValuesTest6[1].result.value = ""
     }
 
     private fun isAtLeastOneIsSelected(): Boolean {

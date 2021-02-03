@@ -174,12 +174,15 @@ class Test3Controller : TestController() {
             isExperimentEnded = false
 
             appendMessageToLog(LogTag.DEBUG, "Инициализация устройств")
-            if (CommunicationModel.checkDevices().isNotEmpty()) {
-                cause = "Не отвечают : ${CommunicationModel.checkDevices()}"
-            }
-            while (!isDevicesResponding() && isExperimentRunning) {
-                CommunicationModel.checkDevices()
+
+            CommunicationModel.checkDevices()
+            var timeToStart = 300
+            while (isExperimentRunning && !isDevicesResponding() && timeToStart-- > 0) {
                 sleep(100)
+            }
+
+            if (!isDevicesResponding()) {
+                cause = "Приборы не отвечают"
             }
             appendMessageToLog(LogTag.DEBUG, "Подготовка стенда")
             appendMessageToLog(LogTag.DEBUG, "Ожидание...")
@@ -213,7 +216,7 @@ class Test3Controller : TestController() {
                     rel1()
                 }
                 "РЭЛ2" -> {
-
+                    rel2()
                 }
                 else -> {
                     Toast.makeText("Ошибка, нет такого типа объекта испытания").show(Toast.ToastType.ERROR)
@@ -296,6 +299,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC1.value = "-.--"
             }
+            view.progressBarTime.progress = 1.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -304,6 +308,7 @@ class Test3Controller : TestController() {
         }
         if (isExperimentRunning && isDevicesResponding()) {
             tableValues[0].resistanceContactGroupNC2.value = "-.--"
+            view.progressBarTime.progress = 2.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -328,11 +333,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC3.value = "-.--"
             }
+            view.progressBarTime.progress = 3.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(28)
             rele2.off(29)
+            view.progressBarTime.progress = 4.0 / 8.0
             tableValues[0].resistanceContactGroupNC4.value = "-.--"
         }
 
@@ -358,13 +365,15 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC5.value = "-.--"
             }
+            view.progressBarTime.progress = 5.0 / 8.0
         }
+
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(14)
             rele2.off(15)
+            view.progressBarTime.progress = 6.0 / 8.0
             tableValues[0].resistanceContactGroupNC6.value = "-.--"
         }
-
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.on(8)
@@ -388,11 +397,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC7.value = "-.--"
             }
+            view.progressBarTime.progress = 7.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(8)
             rele2.off(9)
+            view.progressBarTime.progress = 8.0 / 8.0
             tableValues[0].resistanceContactGroupNC8.value = "-.--"
         }
 
@@ -436,6 +447,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC1.value = "-.--"
             }
+            view.progressBarTime.progress = 1.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -462,6 +474,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC2.value = "-.--"
             }
+            view.progressBarTime.progress = 2.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -488,6 +501,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC3.value = "-.--"
             }
+            view.progressBarTime.progress = 3.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -514,6 +528,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC4.value = "-.--"
             }
+            view.progressBarTime.progress = 4.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -540,6 +555,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC5.value = "-.--"
             }
+            view.progressBarTime.progress = 5.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -566,6 +582,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC6.value = "-.--"
             }
+            view.progressBarTime.progress = 6.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -592,6 +609,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC7.value = "-.--"
             }
+            view.progressBarTime.progress = 7.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -618,6 +636,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC8.value = "-.--"
             }
+            view.progressBarTime.progress = 8.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -641,6 +660,7 @@ class Test3Controller : TestController() {
 
         if (isExperimentRunning && isDevicesResponding()) {
             tableValues[0].resistanceContactGroupNC1.value = "-.--"
+            view.progressBarTime.progress = 1.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -665,12 +685,14 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC2.value = "-.--"
             }
+            view.progressBarTime.progress = 2.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(25)
             rele2.off(26)
             tableValues[0].resistanceContactGroupNC3.value = "-.--"
+            view.progressBarTime.progress = 3.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -695,11 +717,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC4.value = "-.--"
             }
+            view.progressBarTime.progress = 4.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(31)
             rele2.off(32)
+            view.progressBarTime.progress = 5.0 / 8.0
             tableValues[0].resistanceContactGroupNC5.value = "-.--"
         }
 
@@ -725,11 +749,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC6.value = "-.--"
             }
+            view.progressBarTime.progress = 6.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(11)
             rele2.off(12)
+            view.progressBarTime.progress = 7.0 / 8.0
             tableValues[0].resistanceContactGroupNC7.value = "-.--"
         }
 
@@ -755,6 +781,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC8.value = "-.--"
             }
+            view.progressBarTime.progress = 8.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -779,6 +806,7 @@ class Test3Controller : TestController() {
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 1.0 / 8.0
             tableValues[0].resistanceContactGroupNC1.value = "-.--"
         }
 
@@ -804,27 +832,33 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC2.value = "-.--"
             }
+            view.progressBarTime.progress = 2.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(25)
             rele2.off(26)
+            view.progressBarTime.progress = 3.0 / 8.0
             tableValues[0].resistanceContactGroupNC3.value = "-.--"
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 4.0 / 8.0
             tableValues[0].resistanceContactGroupNC4.value = "-.--"
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 5.0 / 8.0
             tableValues[0].resistanceContactGroupNC5.value = "-.--"
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 6.0 / 8.0
             tableValues[0].resistanceContactGroupNC6.value = "-.--"
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 7.0 / 8.0
             tableValues[0].resistanceContactGroupNC7.value = "-.--"
         }
 
@@ -850,6 +884,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC8.value = "-.--"
             }
+            view.progressBarTime.progress = 8.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -896,11 +931,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC1.value = "-.--"
             }
+            view.progressBarTime.progress = 1.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(22)
             rele2.off(23)
+            view.progressBarTime.progress = 2.0 / 8.0
             tableValues[0].resistanceContactGroupNC2.value = "-.--"
         }
 
@@ -926,11 +963,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC3.value = "-.--"
             }
+            view.progressBarTime.progress = 3.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(28)
             rele2.off(29)
+            view.progressBarTime.progress = 4.0 / 8.0
             tableValues[0].resistanceContactGroupNC4.value = "-.--"
         }
 
@@ -956,11 +995,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC5.value = "-.--"
             }
+            view.progressBarTime.progress = 5.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(14)
             rele2.off(15)
+            view.progressBarTime.progress = 6.0 / 8.0
             tableValues[0].resistanceContactGroupNC6.value = "-.--"
         }
 
@@ -986,11 +1027,13 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC7.value = "-.--"
             }
+            view.progressBarTime.progress = 7.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(8)
             rele2.off(9)
+            view.progressBarTime.progress = 8.0 / 8.0
             tableValues[0].resistanceContactGroupNC8.value = "-.--"
         }
 
@@ -1034,6 +1077,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC1.value = "-.--"
             }
+            view.progressBarTime.progress = 1.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1060,6 +1104,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC2.value = "-.--"
             }
+            view.progressBarTime.progress = 2.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1086,6 +1131,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC3.value = "-.--"
             }
+            view.progressBarTime.progress = 3.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1111,6 +1157,7 @@ class Test3Controller : TestController() {
 //            if (measuringR4 != BREAK_IKAS) {
 //                tableValues[0].resistanceContactGroupNC4.value = measuringR4.toString()
 //            } else {
+        view.progressBarTime.progress = 4.0 / 8.0
         tableValues[0].resistanceContactGroupNC4.value = "-.--"
 //            }
 //        }
@@ -1138,6 +1185,7 @@ class Test3Controller : TestController() {
 //            if (measuringR5 != BREAK_IKAS) {
 //                tableValues[0].resistanceContactGroupNC5.value = measuringR5.toString()
 //            } else {
+        view.progressBarTime.progress = 5.0 / 8.0
         tableValues[0].resistanceContactGroupNC5.value = "-.--"
 //            }
 //        }
@@ -1166,6 +1214,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC6.value = "-.--"
             }
+            view.progressBarTime.progress = 6.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1192,6 +1241,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC7.value = "-.--"
             }
+            view.progressBarTime.progress = 7.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1218,6 +1268,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC8.value = "-.--"
             }
+            view.progressBarTime.progress = 8.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1240,10 +1291,12 @@ class Test3Controller : TestController() {
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 1.0 / 8.0
             tableValues[0].resistanceContactGroupNC1.value = "-.--"
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 2.0 / 8.0
             tableValues[0].resistanceContactGroupNC2.value = "-.--"
         }
 
@@ -1271,6 +1324,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC3.value = "-.--"
             }
+            view.progressBarTime.progress = 3.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1297,6 +1351,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC4.value = "-.--"
             }
+            view.progressBarTime.progress = 4.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1323,6 +1378,7 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC5.value = "-.--"
             }
+            view.progressBarTime.progress = 5.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
@@ -1349,15 +1405,18 @@ class Test3Controller : TestController() {
             } else {
                 tableValues[0].resistanceContactGroupNC6.value = "-.--"
             }
+            view.progressBarTime.progress = 6.0 / 8.0
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
             rele2.off(11)
             rele2.off(12)
+            view.progressBarTime.progress = 7.0 / 8.0
             tableValues[0].resistanceContactGroupNC7.value = "-.--"
         }
 
         if (isExperimentRunning && isDevicesResponding()) {
+            view.progressBarTime.progress = 8.0 / 8.0
             tableValues[0].resistanceContactGroupNC8.value = "-.--"
         }
 

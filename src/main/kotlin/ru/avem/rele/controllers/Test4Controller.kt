@@ -136,13 +136,16 @@ class Test4Controller : TestController() {
             isExperimentEnded = false
 
             appendMessageToLog(LogTag.DEBUG, "Инициализация устройств")
-            if (CommunicationModel.checkDevices().isNotEmpty()) {
-                cause = "Не отвечают : ${CommunicationModel.checkDevices()}"
-            }
-            while (!isDevicesResponding() && isExperimentRunning) {
-                CommunicationModel.checkDevices()
+            CommunicationModel.checkDevices()
+            var timeToStart = 300
+            while (isExperimentRunning && !isDevicesResponding() && timeToStart-- > 0) {
                 sleep(100)
             }
+
+            if (!isDevicesResponding()) {
+                cause = "Приборы не отвечают"
+            }
+            view.progressBarTime.progress = 0.2
             appendMessageToLog(LogTag.DEBUG, "Подготовка стенда")
             appendMessageToLog(LogTag.DEBUG, "Ожидание...")
 
@@ -204,6 +207,7 @@ class Test4Controller : TestController() {
             appendMessageToLog(LogTag.DEBUG, "Испытание завершено")
             setResult()
 
+            view.progressBarTime.progress = 1.0
             idcGV1.offVoltage()
             offAllRele()
 //            CommunicationModel.clearPollingRegisters()
@@ -978,8 +982,8 @@ class Test4Controller : TestController() {
                 appendMessageToLog(LogTag.ERROR, "Испытание прервано по причине: потеряна связь с устройствами")
             }
             tableValues[1].voltage.value > tableValues[0].voltage.value -> {
-                appendMessageToLog(LogTag.ERROR, "Напряжение срабатывания больше заданного")
-                tableValues[1].result.value = "Не успешно"
+                appendMessageToLog(LogTag.ERROR, "Напряжение или ток срабатывания больше заданного")
+                tableValues[1].result.value = "Не годен"
             }
             else -> {
                 appendMessageToLog(LogTag.MESSAGE, "Испытание завершено успешно")
